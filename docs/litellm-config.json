@@ -1,0 +1,94 @@
+{
+  "$schema": "https://raw.githubusercontent.com/QwenLM/qwen-code/main/packages/cli/src/config/settingsSchema.json",
+  "modelProviders": {
+    "openai": [
+      {
+        "id": "gpt-4o",
+        "name": "GPT-4o via LiteLLM Proxy",
+        "baseUrl": "http://localhost:4000",
+        "envKey": "LITELLM_API_KEY",
+        "description": "GPT-4o roteado via Flow LLM Proxy",
+        "capabilities": {
+          "streaming": true,
+          "functionCalling": true,
+          "vision": true
+        },
+        "generationConfig": {
+          "temperature": 0.7,
+          "maxTokens": 8192,
+          "topP": 0.95
+        }
+      },
+      {
+        "id": "gpt-4o-mini",
+        "name": "GPT-4o Mini via LiteLLM",
+        "baseUrl": "http://localhost:4000",
+        "envKey": "LITELLM_API_KEY",
+        "description": "Modelo mais econômico para tarefas simples",
+        "capabilities": {
+          "streaming": true,
+          "functionCalling": true,
+          "vision": true
+        }
+      },
+      {
+        "id": "claude-3-5-sonnet-20241022",
+        "name": "Claude 3.5 Sonnet via LiteLLM",
+        "baseUrl": "http://localhost:4000",
+        "envKey": "LITELLM_API_KEY",
+        "description": "Claude 3.5 Sonnet roteado via Flow LLM Proxy",
+        "capabilities": {
+          "streaming": true,
+          "functionCalling": true,
+          "vision": true
+        }
+      },
+      {
+        "id": "claude-3-5-haiku-20241022",
+        "name": "Claude 3.5 Haiku via LiteLLM",
+        "baseUrl": "http://localhost:4000",
+        "envKey": "LITELLM_API_KEY",
+        "description": "Modelo rápido e econômico",
+        "capabilities": {
+          "streaming": true,
+          "functionCalling": true
+        }
+      },
+      {
+        "id": "o1-preview",
+        "name": "OpenAI O1 Preview via LiteLLM",
+        "baseUrl": "http://localhost:4000",
+        "envKey": "LITELLM_API_KEY",
+        "description": "Modelo com raciocínio avançado",
+        "capabilities": {
+          "streaming": false,
+          "functionCalling": false,
+          "vision": false
+        }
+      }
+    ]
+  },
+  "env": {
+    "LITELLM_API_KEY": "sk-your-litellm-proxy-key-here"
+  },
+  "security": {
+    "auth": {
+      "selectedType": "openai"
+    }
+  },
+  "model": {
+    "name": "gpt-4o"
+  },
+  "subagents": {
+    "enabled": true,
+    "maxConcurrentSubagents": 5,
+    "defaultSubagentModel": "gpt-4o-mini"
+  },
+  "mcp": {
+    "enabled": true,
+    "servers": []
+  },
+  "readme": {
+    "readme": "# Configuração LiteLLM para Qwen Code\n\n## Configuração\n\n1. **Inicie o LiteLLM Proxy**:\n   ```bash\n   cd /Users/davipeterlini/projects-cit/flow/flow-llm-proxy\n   litellm --config config.yaml --port 4000\n   ```\n\n2. **Configure a API Key**:\n   - Substitua `sk-your-litellm-proxy-key-here` pela sua chave do LiteLLM\n   - Ou configure via variável de ambiente:\n     ```bash\n     export LITELLM_API_KEY=\"sk-your-key\"\n     ```\n\n3. **Copie para ~/.qwen/settings.json**:\n   ```bash\n   cp litellm-config.json ~/.qwen/settings.json\n   ```\n\n## Modelos Disponíveis\n\n- **gpt-4o**: Modelo principal, melhor para tarefas complexas\n- **gpt-4o-mini**: Mais econômico, para tarefas simples\n- **claude-3-5-sonnet**: Alternativa poderosa da Anthropic\n- **claude-3-5-haiku**: Rápido e econômico\n- **o1-preview**: Raciocínio avançado (sem streaming)\n\n## Uso\n\n```bash\n# Usar o modelo padrão (gpt-4o)\nqwen-code \"Escreva um hello world\"\n\n# Usar modelo específico\nqwen-code --model claude-3-5-sonnet \"Explique async/await\"\n\n# Usar modelo econômico para sub-agentes\nqwen-code --subagent-model gpt-4o-mini \"Analise este código\"\n```\n\n## Prioridade de Configuração\n\n1. CLI arguments: `--base-url`, `--model`, `--api-key`\n2. Environment variables: `OPENAI_BASE_URL`, `LITELLM_API_KEY`\n3. settings.json: Este arquivo\n4. Defaults: Valores padrão do Qwen Code\n\n## Troubleshooting\n\n### LiteLLM não está rodando\n```bash\n# Verifique se está rodando\nlsof -i :4000\n\n# Liste modelos disponíveis\ncurl http://localhost:4000/v1/models\n```\n\n### API Key inválida\n```bash\n# Verifique a variável de ambiente\necho $LITELLM_API_KEY\n\n# Teste a conexão\ncurl -H \"Authorization: Bearer $LITELLM_API_KEY\" \\\n     http://localhost:4000/v1/models\n```\n\n### Modelo não encontrado\nVerifique se o modelo está configurado no `config.yaml` do LiteLLM:\n```yaml\nmodel_list:\n  - model_name: gpt-4o\n    litellm_params:\n      model: gpt-4-0125-preview\n      api_key: sk-...\n```\n\n## Integração com SuperClaude\n\nTodas as features do SuperClaude funcionam com LiteLLM:\n- ✅ Agents (planner, architect, code-reviewer, etc.)\n- ✅ Planning Engine\n- ✅ Self-Correction Engine  \n- ✅ Test-Driven Workflow\n- ✅ Codebase Analysis\n- ✅ Project Memory\n\n## Custos e Performance\n\nMonitore via dashboard do LiteLLM:\n- Custos por modelo\n- Latência por provider\n- Taxa de erro\n- Rate limits\n\n## Referências\n\n- [LiteLLM Docs](https://docs.litellm.ai/)\n- [Qwen Code Auth Guide](../docs/users/configuration/auth.md)\n- [Flow LLM Proxy](/Users/davipeterlini/projects-cit/flow/flow-llm-proxy)\n"
+  }
+}

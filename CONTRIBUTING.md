@@ -301,3 +301,384 @@ npm run auth
 npm run prerelease:dev
 npm publish --workspaces
 ```
+
+## Build & Publish to Flow Coder GCP
+
+Scripts para automatizar o build e publicação do binário do Qwen Code CLI no bucket GCP do Flow Coder.
+
+### Estrutura
+
+```
+scripts/
+├── build_and_publish.sh       # Script principal - build + publish
+├── build_binary.sh            # Build do binário CLI
+├── publish_gcp_bucket.sh      # Publicação no GCP bucket
+└── utils/
+    ├── constants.sh           # Constantes do projeto
+    └── utils.sh               # Funções utilitárias
+```
+
+### Pré-requisitos
+
+1. **Node.js**: Versão 20.0.0 ou superior
+2. **Google Cloud SDK**:
+
+   ```bash
+   # macOS
+   brew install google-cloud-sdk
+   ```
+
+3. **Autenticação GCP**:
+   ```bash
+   gcloud auth login
+   gcloud config set project ciandt-flow-plataform
+   ```
+
+### Scripts Disponíveis
+
+#### 1. Script Principal: build_and_publish.sh
+
+Build completo e publicação no GCP bucket:
+
+```bash
+# Uso básico (usa versão do package.json)
+./scripts/build_and_publish.sh
+
+# Com versão específica
+./scripts/build_and_publish.sh 0.10.2
+
+# Sem instalar dependências (mais rápido)
+./scripts/build_and_publish.sh --skip-install
+```
+
+**O que faz:**
+
+1. Build do binário CLI (inclui todos os pacotes)
+2. Verifica artefatos de build
+3. Upload para `gs://flow_coder_dev/flow_coder_cli/`
+4. Cria arquivo de versão com metadados
+
+#### 2. Build Isolado: build_binary.sh
+
+Apenas build do binário:
+
+```bash
+./scripts/build_binary.sh
+./scripts/build_binary.sh --skip-install
+```
+
+#### 3. Publicação Isolada: publish_gcp_bucket.sh
+
+Apenas publicação:
+
+```bash
+./scripts/publish_gcp_bucket.sh
+./scripts/publish_gcp_bucket.sh 0.10.2
+```
+
+### URLs de Acesso
+
+Após a publicação:
+
+- **Última versão**: https://storage.googleapis.com/flow_coder_dev/flow_coder_cli/cli.js
+- **Versão específica**: https://storage.googleapis.com/flow_coder_dev/flow_coder_cli/cli-{version}.js
+- **Info de versão**: https://storage.googleapis.com/flow_coder_dev/flow_coder_cli/version.json
+
+### Exemplo de Fluxo Completo
+
+```bash
+# 1. Navegar para o projeto
+cd /Users/davipeterlini/projects-personal/qwen-code
+
+# 2. Garantir que está autenticado no GCP
+gcloud auth login
+gcloud config set project ciandt-flow-plataform
+
+# 3. Executar build e publicação
+./scripts/build_and_publish.sh
+
+# Saída esperada:
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#   Qwen Code CLI Build & Publish Process
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#
+# ℹ Using version from package.json: 0.10.2
+#
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#   STEP 1: Build CLI Binary
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#
+# ✓ Build artifacts verified: cli.js (17M)
+#
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#   STEP 2: Publish to GCP Bucket
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#
+# ✓ Uploaded cli.js successfully
+# ✓ Uploaded cli-0.10.2.js successfully
+# ✓ Publishing completed successfully!
+```
+
+### Troubleshooting
+
+**Erro: "gcloud not found"**
+
+```bash
+brew install google-cloud-sdk
+```
+
+**Erro: "Not authenticated"**
+
+```bash
+gcloud auth login
+```
+
+**Erro: "Cannot access bucket"**
+
+```bash
+gcloud config set project ciandt-flow-plataform
+gcloud storage ls gs://flow_coder_dev
+```
+
+**Erro: "CLI binary not found"**
+
+```bash
+# Executar build primeiro
+./scripts/build_binary.sh
+
+# Verificar se dist/cli.js existe
+ls -lh dist/cli.js
+```
+
+### Integração com CI/CD
+
+Para usar em pipelines:
+
+```bash
+# GitHub Actions / GitLab CI
+- name: Build and Publish
+  run: |
+    ./scripts/build_and_publish.sh ${{ github.ref_name }} --skip-install
+  env:
+    GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GCP_SA_KEY }}
+```
+
+## Instalação do Binário Publicado
+
+Esta seção descreve como instalar o Qwen Code CLI publicado no GCP bucket para usuários finais e desenvolvedores.
+
+### Método 1: Instalação Automática via Script (Recomendado)
+
+Use os scripts oficiais:
+
+```bash
+# Linux/macOS
+curl -fsSL https://qwen-code-assets.oss-cn-hangzhou.aliyuncs.com/installation/install-qwen.sh | bash
+
+# Windows (Admin CMD)
+curl -fsSL -o %TEMP%\install-qwen.bat https://qwen-code-assets.oss-cn-hangzhou.aliyuncs.com/installation/install-qwen.bat && %TEMP%\install-qwen.bat
+```
+
+> Reinicie o terminal após a instalação.
+
+### Método 2: Instalação via NPM
+
+```bash
+npm install -g @qwen-code/qwen-code@latest
+```
+
+Verificar instalação:
+
+```bash
+qwen --version
+```
+
+### Método 3: Instalação via Homebrew
+
+```bash
+brew install qwen-code
+```
+
+### Método 4: Instalação Manual do GCP Bucket
+
+Para instalar diretamente do bucket de desenvolvimento:
+
+```bash
+# 1. Criar diretório
+sudo mkdir -p /usr/local/lib/qwen-code
+
+# 2. Baixar binário
+curl -fsSL https://storage.googleapis.com/flow_coder_dev/flow_coder_cli/cli.js -o qwen-cli.js
+sudo mv qwen-cli.js /usr/local/lib/qwen-code/cli.js
+sudo chmod +x /usr/local/lib/qwen-code/cli.js
+
+# 3. Criar wrapper script
+sudo tee /usr/local/bin/qwen > /dev/null << 'EOF'
+#!/bin/bash
+exec node /usr/local/lib/qwen-code/cli.js "$@"
+EOF
+
+sudo chmod +x /usr/local/bin/qwen
+
+# 4. Verificar
+qwen --version
+```
+
+### Método 5: Instalação de Versão Específica
+
+```bash
+# Instalar versão específica do GCP
+VERSION="0.10.2"
+curl -fsSL https://storage.googleapis.com/flow_coder_dev/flow_coder_cli/cli-${VERSION}.js -o qwen-cli.js
+# ... seguir passos do Método 4
+```
+
+### Verificar Versão Disponível
+
+```bash
+# Ver informações da versão publicada
+curl -s https://storage.googleapis.com/flow_coder_dev/flow_coder_cli/version.json
+
+# Exemplo de saída:
+# {
+#   "version": "0.10.2",
+#   "updated": "2026-02-19T10:30:00Z",
+#   "binary": "cli.js",
+#   "versioned_binary": "cli-0.10.2.js"
+# }
+```
+
+### Configuração Pós-Instalação
+
+Após instalar, configure a autenticação:
+
+#### Opção 1: OAuth (Grátis - 1000 req/dia)
+
+```bash
+qwen
+# Dentro da sessão:
+/auth  # Escolher "Qwen OAuth"
+```
+
+#### Opção 2: API Key
+
+Criar `~/.qwen/settings.json`:
+
+```json
+{
+  "modelProviders": {
+    "openai": [
+      {
+        "id": "qwen3-coder-plus",
+        "name": "qwen3-coder-plus",
+        "baseUrl": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+        "envKey": "DASHSCOPE_API_KEY"
+      }
+    ]
+  },
+  "env": {
+    "DASHSCOPE_API_KEY": "sk-xxxxxxxxxxxxx"
+  },
+  "security": {
+    "auth": {
+      "selectedType": "openai"
+    }
+  },
+  "model": {
+    "name": "qwen3-coder-plus"
+  }
+}
+```
+
+Ou via variável de ambiente:
+
+```bash
+# Linux/macOS
+export DASHSCOPE_API_KEY="sk-xxxxxxxxxxxxx"
+qwen
+
+# Windows (PowerShell)
+$env:DASHSCOPE_API_KEY="sk-xxxxxxxxxxxxx"
+qwen
+```
+
+### Atualização
+
+```bash
+# Via NPM
+npm update -g @qwen-code/qwen-code@latest
+
+# Via Homebrew
+brew upgrade qwen-code
+
+# Via GCP (substituir instalação manual)
+curl -fsSL https://storage.googleapis.com/flow_coder_dev/flow_coder_cli/cli.js -o /usr/local/lib/qwen-code/cli.js
+```
+
+### Desinstalação
+
+```bash
+# Via NPM
+npm uninstall -g @qwen-code/qwen-code
+
+# Via Homebrew
+brew uninstall qwen-code
+
+# Manual
+sudo rm /usr/local/bin/qwen
+sudo rm -rf /usr/local/lib/qwen-code
+
+# Remover configurações (opcional)
+rm -rf ~/.qwen
+```
+
+### Troubleshooting de Instalação
+
+**Comando não encontrado:**
+
+```bash
+# Adicionar ao PATH
+export PATH="$PATH:$(npm config get prefix)/bin"
+
+# Tornar permanente (bash)
+echo 'export PATH="$PATH:$(npm config get prefix)/bin"' >> ~/.bashrc
+source ~/.bashrc
+
+# Tornar permanente (zsh)
+echo 'export PATH="$PATH:$(npm config get prefix)/bin"' >> ~/.zshrc
+source ~/.zshrc
+```
+
+**Erro EACCES (permissão negada):**
+
+```bash
+# Configurar diretório npm global
+mkdir -p ~/.npm-global
+npm config set prefix '~/.npm-global'
+export PATH=~/.npm-global/bin:$PATH
+
+# Reinstalar
+npm install -g @qwen-code/qwen-code
+```
+
+**Node.js versão antiga:**
+
+```bash
+# Verificar versão
+node --version  # Deve ser >= 20.0.0
+
+# Atualizar via nvm (recomendado)
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+nvm install 20
+nvm use 20
+nvm alias default 20
+```
+
+**Module not found:**
+
+```bash
+# Limpar cache e reinstalar
+npm cache clean --force
+npm uninstall -g @qwen-code/qwen-code
+npm install -g @qwen-code/qwen-code
+```

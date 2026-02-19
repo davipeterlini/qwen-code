@@ -31,6 +31,18 @@ Qwen Code is an open-source AI agent for the terminal, optimized for [Qwen3-Code
 - **Agentic workflow, feature-rich**: rich built-in tools (Skills, SubAgents) for a full agentic workflow and a Claude Code-like experience.
 - **Terminal-first, IDE-friendly**: built for developers who live in the command line, with optional integration for VS Code, Zed, and JetBrains IDEs.
 
+## 🚀 Quick Start Guide
+
+| I want to...          | Command                                                                                                 |
+| --------------------- | ------------------------------------------------------------------------------------------------------- |
+| **Install (Quick)**   | `curl -fsSL https://qwen-code-assets.oss-cn-hangzhou.aliyuncs.com/installation/install-qwen.sh \| bash` |
+| **Install (NPM)**     | `npm install -g @qwen-code/qwen-code@latest`                                                            |
+| **Start using**       | `qwen`                                                                                                  |
+| **Authenticate**      | Inside session: `/auth`                                                                                 |
+| **Get help**          | Inside session: `/help`                                                                                 |
+| **Build from source** | See [Development Setup](#development--publishing)                                                       |
+| **Publish to GCP**    | `./scripts/build_and_publish.sh` ([Details](./CONTRIBUTING.md#build--publish-to-flow-coder-gcp))        |
+
 ## Installation
 
 ### Quick Install (Recommended)
@@ -411,6 +423,20 @@ To report a bug from within the CLI, run `/bug` and include a short title and re
 
 - Discord: https://discord.gg/ycKBjdNd
 - Dingtalk: https://qr.dingtalk.com/action/joingroup?code=v1,k1,+FX6Gf/ZDlTahTIRi8AEQhIaBlqykA0j+eBKKdhLeAE=&_dt_no_comment=1&origin=1
+
+## Development & Publishing
+
+For contributors and developers who want to build, publish, or install custom builds:
+
+- **Build & Publish Process**: See [CONTRIBUTING.md - Build & Publish to Flow Coder GCP](./CONTRIBUTING.md#build--publish-to-flow-coder-gcp)
+  - Automated scripts for building and publishing to GCP bucket
+  - Manual build and publish steps
+  - Integration with CI/CD
+
+- **Installation Methods**: See [CONTRIBUTING.md - Instalação do Binário Publicado](./CONTRIBUTING.md#instalação-do-binário-publicado)
+  - Install from NPM, Homebrew, or direct from GCP bucket
+  - Manual installation steps
+  - Configuration and troubleshooting
 
 ## Acknowledgments
 
