@@ -12,6 +12,16 @@ import { simpleGit, CheckRepoActions } from 'simple-git';
 import type { Storage } from '../config/storage.js';
 import { isNodeError } from '../utils/errors.js';
 
+/**
+ * Checkpoint metadata interface
+ */
+export interface Checkpoint {
+  hash: string;
+  message: string;
+  timestamp: Date;
+  filesChanged: string[];
+}
+
 export class GitService {
   private projectRoot: string;
   private storage: Storage;
@@ -117,5 +127,91 @@ export class GitService {
     await repo.raw(['restore', '--source', commitHash, '.']);
     // Removes any untracked files that were introduced post snapshot.
     await repo.clean('f', ['-d']);
+  }
+
+  /**
+   * List all checkpoints in chronological order (newest first)
+   */
+  async listCheckpoints(): Promise<Checkpoint[]> {
+    try {
+      const repo = this.shadowGitRepository;
+      const log = await repo.log();
+      return log.all.map((commit) => ({
+        hash: commit.hash,
+        message: commit.message,
+        timestamp: new Date(commit.date),
+        filesChanged: commit.diff?.files?.map((f) => f.file) || [],
+      }));
+    } catch (error) {
+      throw new Error(
+        `Failed to list checkpoints: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    }
+  }
+
+  /**
+   * Get previous checkpoint hash (for undo)
+   */
+  async getPreviousCheckpoint(): Promise<string | null> {
+    try {
+      const repo = this.shadowGitRepository;
+      const hash = await repo.raw('rev-parse', 'HEAD~1');
+      return hash.trim();
+    } catch {
+      return null; // No previous commit
+    }
+  }
+
+  /**
+   * Get next checkpoint hash (for redo)
+   * Returns the commit that comes after the current one in history
+   */
+  async getNextCheckpoint(currentHash: string): Promise<string | null> {
+    try {
+      const commits = await this.listCheckpoints();
+      const currentIndex = commits.findIndex((c) => c.hash === currentHash);
+      if (currentIndex > 0) {
+        return commits[currentIndex - 1].hash;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Auto-generate checkpoint name based on file changes
+   */
+  async generateCheckpointName(files: string[]): Promise<string> {
+    if (files.length === 0) return 'Empty checkpoint';
+    if (files.length === 1) return `Modified ${path.basename(files[0])}`;
+    if (files.length <= 3) {
+      return `Modified ${files.map((f) => path.basename(f)).join(', ')}`;
+    }
+    return `Modified ${files.length} files`;
+  }
+
+  /**
+   * Create optimized checkpoint with automatic naming and deduplication
+   */
+  async createOptimizedCheckpoint(message?: string): Promise<string> {
+    try {
+      const repo = this.shadowGitRepository;
+      const status = await repo.status();
+      const changedFiles = [
+        ...status.modified,
+        ...status.not_added,
+        ...status.created,
+      ];
+
+      const checkpointMessage =
+        message || (await this.generateCheckpointName(changedFiles));
+
+      return this.createFileSnapshot(checkpointMessage);
+    } catch (error) {
+      throw new Error(
+        `Failed to create optimized checkpoint: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    }
   }
 }

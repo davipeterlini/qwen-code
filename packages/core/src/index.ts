@@ -168,6 +168,16 @@ export * from './tools/tools.js';
 export * from './tools/web-fetch.js';
 export * from './tools/web-search/index.js';
 export * from './tools/write-file.js';
+export * from './tools/checkpoint.js';
+export * from './tools/git-awareness.js';
+export * from './tools/context-pruning.js';
+
+// ============================================================================
+// Context Pruning
+// ============================================================================
+
+export * from './context/scoring.js';
+export * from './context/pruner.js';
 
 // ============================================================================
 // Services
@@ -177,6 +187,7 @@ export * from './services/chatRecordingService.js';
 export * from './services/fileDiscoveryService.js';
 export * from './services/fileSystemService.js';
 export * from './services/gitService.js';
+export * from './services/gitAwarenessService.js';
 export * from './services/sessionService.js';
 export * from './services/shellExecutionService.js';
 

@@ -56,7 +56,11 @@
     "telemetry": "node scripts/telemetry.js",
     "check:lockfile": "node scripts/check-lockfile.js",
     "clean": "node scripts/clean.js",
-    "pre-commit": "node scripts/pre-commit.js"
+    "pre-commit": "node scripts/pre-commit.js",
+    "sync:upstream": "./scripts/sync-upstream.sh",
+    "sync:upstream:manual": "./scripts/sync-upstream.sh --manual",
+    "sync:upstream:dry-run": "./scripts/sync-upstream.sh --dry-run",
+    "sync:upstream:force": "./scripts/sync-upstream.sh --force"
   },
   "overrides": {
     "wrap-ansi": "9.0.2",

@@ -1729,6 +1729,60 @@ describe('InputPrompt', () => {
       expect(props.buffer.move).toHaveBeenCalledWith('home');
       unmount();
     });
+
+    it('should restore last submitted text when ESC is pressed after submission', async () => {
+      const submittedText = 'This is my test query';
+      props.buffer.setText(submittedText);
+
+      const { stdin, unmount } = renderWithProviders(
+        <InputPrompt {...props} />,
+      );
+      await wait();
+
+      // Submit the text with Enter
+      stdin.write('\r');
+      await wait();
+
+      // Verify the buffer was cleared after submission
+      expect(props.buffer.setText).toHaveBeenCalledWith('');
+
+      // Press ESC to restore the text
+      stdin.write('\x1B');
+      await wait();
+
+      // Verify the last submitted text was restored
+      expect(props.buffer.setText).toHaveBeenCalledWith(submittedText);
+      unmount();
+    });
+
+    it('should clear restored text when ESC is pressed again', async () => {
+      const submittedText = 'This is my test query';
+      props.buffer.setText(submittedText);
+
+      const { stdin, unmount } = renderWithProviders(
+        <InputPrompt {...props} />,
+      );
+      await wait();
+
+      // Submit the text with Enter
+      stdin.write('\r');
+      await wait();
+
+      // Press ESC to restore the text
+      stdin.write('\x1B');
+      await wait();
+
+      // Verify the text was restored
+      expect(props.buffer.setText).toHaveBeenCalledWith(submittedText);
+
+      // Press ESC again to clear
+      stdin.write('\x1B');
+      await wait();
+
+      // Verify the buffer was cleared
+      expect(props.buffer.setText).toHaveBeenCalledWith('');
+      unmount();
+    });
   });
 
   describe('reverse search', () => {

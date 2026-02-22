@@ -63,6 +63,7 @@
     "ignore": "^7.0.0",
     "json-bigint": "^1.0.0",
     "jsonrepair": "^3.13.0",
+    "lru-cache": "^11.0.0",
     "marked": "^15.0.12",
     "mime": "4.0.7",
     "mnemonist": "^0.40.3",

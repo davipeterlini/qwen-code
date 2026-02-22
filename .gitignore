@@ -51,7 +51,7 @@ packages/core/src/generated/
 packages/vscode-ide-companion/*.vsix
 
 # Qwen Code Configs
-.qwen/
+# Allow .qwen directory but control contents via .qwen/.gitignore
 .qwen-code/
 logs/
 # GHA credentials

@@ -25,6 +25,9 @@ export const ToolNames = {
   WEB_SEARCH: 'web_search',
   LS: 'list_directory',
   LSP: 'lsp',
+  CHECKPOINT: 'checkpoint',
+  GIT_AWARENESS: 'git_awareness',
+  CONTEXT_PRUNING: 'context_pruning',
 } as const;
 
 /**
@@ -48,6 +51,9 @@ export const ToolDisplayNames = {
   WEB_SEARCH: 'WebSearch',
   LS: 'ListFiles',
   LSP: 'Lsp',
+  CHECKPOINT: 'Checkpoint',
+  GIT_AWARENESS: 'GitAwareness',
+  CONTEXT_PRUNING: 'ContextPruning',
 } as const;
 
 // Migration from old tool names to new tool names

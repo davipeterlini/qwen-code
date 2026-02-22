@@ -438,6 +438,42 @@ For contributors and developers who want to build, publish, or install custom bu
   - Manual installation steps
   - Configuration and troubleshooting
 
+## 🔄 Sync with Upstream
+
+To sync changes from the official Qwen Code repository:
+
+### Quick Sync (Recommended)
+
+```bash
+# Full sync (creates branch and PR)
+npm run sync:upstream
+
+# Local only (no PR)
+npm run sync:upstream:manual
+
+# Dry run (simulate)
+npm run sync:upstream:dry-run
+```
+
+### Manual Sync
+
+```bash
+# Using shell script
+./scripts/sync-upstream.sh
+
+# With options
+./scripts/sync-upstream.sh --manual    # Local branch only
+./scripts/sync-upstream.sh --force     # Force recreate branch
+./scripts/sync-upstream.sh --help      # Show help
+```
+
+### GitHub Actions
+
+- **Automatic**: Every Monday at 9:00 UTC
+- **Manual**: Actions → Sync with Upstream Qwen Code → Run workflow
+
+📖 **Full Documentation**: See [docs/SYNC_UPSTREAM.md](docs/SYNC_UPSTREAM.md)
+
 ## Acknowledgments
 
 This project is based on [Google Gemini CLI](https://github.com/google-gemini/gemini-cli). We acknowledge and appreciate the excellent work of the Gemini CLI team. Our main contribution focuses on parser-level adaptations to better support Qwen-Coder models.

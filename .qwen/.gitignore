@@ -1,0 +1,29 @@
+# Ignore arquivos de configuração local com credenciais
+*.local.json
+*.local.env
+.env.flow.local
+.env.local
+
+# Ignore arquivos sensíveis
+settings.json
+.env
+
+# Mas mantenha os exemplos versionados
+!*.example
+!*example.json
+!*example.env
+
+# Ignore logs
+*.log
+
+# Ignore certificados
+*.crt
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Ignore backups
+*.bak
+*.backup
+*~
