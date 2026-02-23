@@ -1,0 +1,322 @@
+name: Sync with Upstream Qwen Code
+
+on:
+  # Executar manualmente via GitHub UI ou API
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Force recreate merge-back branch (deletes existing)'
+        required: false
+        default: 'false'
+        type: boolean
+      create_pr:
+        description: 'Create or update PR after sync'
+        required: false
+        default: 'true'
+        type: boolean
+      branch_name:
+        description: 'Branch name for merge-back (default: merge-back)'
+        required: false
+        default: 'merge-back'
+        type: string
+
+  # Executar semanalmente (toda segunda-feira às 9h UTC)
+  schedule:
+    - cron: '0 9 * * 1'
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+env:
+  UPSTREAM_REPO: https://github.com/QwenLM/qwen-code.git
+  UPSTREAM_REMOTE: upstream
+  BASE_BRANCH: main
+
+jobs:
+  sync-upstream:
+    name: Sync with upstream and create PR
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install GitHub CLI
+        run: |
+          type -p curl >/dev/null || (apt update && apt-get install -y curl)
+          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+          chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+          apt update
+          apt install gh -y
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Add upstream remote
+        run: |
+          git remote add upstream ${{ env.UPSTREAM_REPO }} || true
+          git remote set-url upstream ${{ env.UPSTREAM_REPO }} || true
+          git remote -v
+
+      - name: Fetch upstream changes
+        run: |
+          git fetch upstream ${{ env.BASE_BRANCH }}
+          echo "Latest upstream commit:"
+          git log upstream/${{ env.BASE_BRANCH }} -1 --oneline
+
+      - name: Get upstream commit info
+        id: upstream_info
+        run: |
+          COMMIT_SHA=$(git rev-parse upstream/${{ env.BASE_BRANCH }})
+          COMMIT_MSG=$(git log upstream/${{ env.BASE_BRANCH }} -1 --pretty=format:'%s')
+          COMMIT_DATE=$(git log upstream/${{ env.BASE_BRANCH }} -1 --pretty=format:'%ci')
+          SHORT_SHA=$(git rev-parse --short upstream/${{ env.BASE_BRANCH }})
+
+          echo "sha=${COMMIT_SHA}" >> $GITHUB_OUTPUT
+          echo "short_sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
+          echo "message=${COMMIT_MSG}" >> $GITHUB_OUTPUT
+          echo "date=${COMMIT_DATE}" >> $GITHUB_OUTPUT
+
+          # Count commits ahead
+          COMMITS_AHEAD=$(git rev-list --count ${{ env.BASE_BRANCH }}..upstream/${{ env.BASE_BRANCH }} 2>/dev/null || echo "0")
+          echo "commits_ahead=${COMMITS_AHEAD}" >> $GITHUB_OUTPUT
+
+          echo "Commits ahead: ${COMMITS_AHEAD}"
+
+      - name: Check if already up to date
+        if: steps.upstream_info.outputs.commits_ahead == '0'
+        run: |
+          echo "✅ Repository is already up to date with upstream"
+          echo "No new commits to sync"
+
+      - name: Check if merge-back branch exists
+        id: check_branch
+        if: steps.upstream_info.outputs.commits_ahead != '0'
+        run: |
+          if git ls-remote --heads origin ${{ github.event.inputs.branch_name || 'merge-back' }} | grep -q "${{ github.event.inputs.branch_name || 'merge-back' }}"; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Branch ${{ github.event.inputs.branch_name || 'merge-back' }} already exists"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "Branch ${{ github.event.inputs.branch_name || 'merge-back' }} does not exist"
+          fi
+
+      - name: Delete existing merge-back branch if exists and force
+        if: steps.check_branch.outputs.exists == 'true' && (github.event.inputs.force == 'true' || github.event_name == 'schedule')
+        run: |
+          git push origin --delete ${{ github.event.inputs.branch_name || 'merge-back' }} || true
+          echo "Deleted existing ${{ github.event.inputs.branch_name || 'merge-back' }} branch"
+
+      - name: Create merge-back branch from upstream
+        if: steps.upstream_info.outputs.commits_ahead != '0'
+        run: |
+          BRANCH_NAME="${{ github.event.inputs.branch_name || 'merge-back' }}"
+          git checkout -b $BRANCH_NAME upstream/${{ env.BASE_BRANCH }}
+          git push -u origin $BRANCH_NAME
+          echo "Created $BRANCH_NAME branch from upstream/${{ env.BASE_BRANCH }}"
+
+      - name: Check for existing PR
+        id: check_pr
+        if: steps.upstream_info.outputs.commits_ahead != '0' && (github.event.inputs.create_pr != 'false' || github.event_name == 'schedule')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUMBER=$(gh pr list --head ${{ github.event.inputs.branch_name || 'merge-back' }} --base ${{ env.BASE_BRANCH }} --json number --jq '.[0].number' 2>/dev/null || echo "")
+          if [ -n "$PR_NUMBER" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "number=${PR_NUMBER}" >> $GITHUB_OUTPUT
+            echo "Existing PR found: #${PR_NUMBER}"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "No existing PR found"
+          fi
+
+      - name: Create Pull Request
+        if: steps.check_pr.outputs.exists == 'false' && steps.upstream_info.outputs.commits_ahead != '0' && (github.event.inputs.create_pr != 'false' || github.event_name == 'schedule')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr create \
+            --title "🔄 Sync with upstream Qwen Code" \
+            --body "$(cat <<EOF
+          ## 🔄 Sync with Upstream Repository
+
+          This PR syncs the latest changes from the official Qwen Code repository.
+
+          ### 📊 Changes Summary
+
+          - **Upstream commits**: ${{ steps.upstream_info.outputs.commits_ahead }} new commits
+          - **Latest commit**: \`${{ steps.upstream_info.outputs.sha }}\`
+          - **Short SHA**: \`${{ steps.upstream_info.outputs.short_sha }}\`
+          - **Commit message**: ${{ steps.upstream_info.outputs.message }}
+          - **Commit date**: ${{ steps.upstream_info.outputs.date }}
+
+          ### ⚠️ Manual Steps Required
+
+          Before merging this PR, please:
+
+          1. **Review conflicts**: Check if there are any merge conflicts with our custom changes
+          2. **Test locally**: Pull the \`merge-back\` branch and test the application
+             \`\`\`bash
+             git fetch origin merge-back
+             git checkout merge-back
+             npm install
+             npm run build
+             npm test
+             \`\`\`
+          3. **Verify custom features**: Ensure our custom implementations still work:
+             - ESC to restore prompt feature
+             - SuperClaude features (agents, intelligence, planning, robustness)
+             - Custom workflows and examples
+             - Documentation updates
+          4. **Update dependencies**: Check if any dependencies need updates
+          5. **Run full test suite**: Ensure all tests pass
+             \`\`\`bash
+             npm run test:all
+             npm run lint
+             \`\`\`
+
+          ### 🔗 References
+
+          - **Upstream Repository**: https://github.com/QwenLM/qwen-code
+          - **Compare Changes**: https://github.com/QwenLM/qwen-code/compare/${{ steps.upstream_info.outputs.sha }}...main
+
+          ### 📝 Merge Instructions
+
+          After verifying everything:
+
+          1. Resolve any conflicts manually
+          2. Update the changelog if needed
+          3. Merge this PR using **merge commit** (not squash) to preserve upstream history
+
+          ---
+
+          🤖 This PR was automatically created by the sync-upstream workflow.
+          EOF
+          )" \
+            --head ${{ github.event.inputs.branch_name || 'merge-back' }} \
+            --base ${{ env.BASE_BRANCH }} \
+            --label "sync" \
+            --label "upstream"
+
+      - name: Update existing PR
+        if: steps.check_pr.outputs.exists == 'true' && steps.upstream_info.outputs.commits_ahead != '0' && (github.event.inputs.create_pr != 'false' || github.event_name == 'schedule')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr edit ${{ steps.check_pr.outputs.number }} \
+            --body "$(cat <<EOF
+          ## 🔄 Sync with Upstream Repository (Updated)
+
+          This PR syncs the latest changes from the official Qwen Code repository.
+
+          ### 📊 Changes Summary
+
+          - **Upstream commits**: ${{ steps.upstream_info.outputs.commits_ahead }} new commits
+          - **Latest commit**: \`${{ steps.upstream_info.outputs.sha }}\`
+          - **Short SHA**: \`${{ steps.upstream_info.outputs.short_sha }}\`
+          - **Commit message**: ${{ steps.upstream_info.outputs.message }}
+          - **Commit date**: ${{ steps.upstream_info.outputs.date }}
+          - **Last updated**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+
+          ### ⚠️ Manual Steps Required
+
+          Before merging this PR, please:
+
+          1. **Review conflicts**: Check if there are any merge conflicts with our custom changes
+          2. **Test locally**: Pull the \`merge-back\` branch and test the application
+             \`\`\`bash
+             git fetch origin merge-back
+             git checkout merge-back
+             npm install
+             npm run build
+             npm test
+             \`\`\`
+          3. **Verify custom features**: Ensure our custom implementations still work:
+             - ESC to restore prompt feature
+             - SuperClaude features (agents, intelligence, planning, robustness)
+             - Custom workflows and examples
+             - Documentation updates
+          4. **Update dependencies**: Check if any dependencies need updates
+          5. **Run full test suite**: Ensure all tests pass
+             \`\`\`bash
+             npm run test:all
+             npm run lint
+             \`\`\`
+
+          ### 🔗 References
+
+          - **Upstream Repository**: https://github.com/QwenLM/qwen-code
+          - **Compare Changes**: https://github.com/QwenLM/qwen-code/compare/${{ steps.upstream_info.outputs.sha }}...main
+
+          ### 📝 Merge Instructions
+
+          After verifying everything:
+
+          1. Resolve any conflicts manually
+          2. Update the changelog if needed
+          3. Merge this PR using **merge commit** (not squash) to preserve upstream history
+
+          ---
+
+          🤖 This PR was automatically updated by the sync-upstream workflow.
+          EOF
+          )"
+          echo "Updated existing PR #${{ steps.check_pr.outputs.number }}"
+
+      - name: Generate PR URL
+        id: pr_url
+        if: steps.upstream_info.outputs.commits_ahead != '0'
+        run: |
+          REPO_NAME="${{ github.repository }}"
+          PR_NUMBER="${{ steps.check_pr.outputs.number }}"
+          if [ -n "$PR_NUMBER" ]; then
+            echo "url=https://github.com/${REPO_NAME}/pull/${PR_NUMBER}" >> $GITHUB_OUTPUT
+          else
+            echo "url=" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## 🔄 Sync Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Upstream**: https://github.com/QwenLM/qwen-code" >> $GITHUB_STEP_SUMMARY
+          echo "- **Base Branch**: ${{ env.BASE_BRANCH }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Sync Branch**: ${{ github.event.inputs.branch_name || 'merge-back' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commits Ahead**: ${{ steps.upstream_info.outputs.commits_ahead }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Latest Commit**: \`${{ steps.upstream_info.outputs.short_sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ steps.upstream_info.outputs.commits_ahead }}" == "0" ]; then
+            echo "- **Status**: ✅ Already up to date" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ steps.check_pr.outputs.exists }}" == "true" ]; then
+            echo "- **PR**: #${{ steps.check_pr.outputs.number }} (updated)" >> $GITHUB_STEP_SUMMARY
+            echo "- **URL**: ${{ steps.pr_url.outputs.url }}" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- **PR**: Created new PR" >> $GITHUB_STEP_SUMMARY
+            echo "- **URL**: ${{ steps.pr_url.outputs.url }}" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "❌ Sync failed! Please check the workflow logs for details."
+          echo "You can also run the sync manually using:"
+          echo "\`\`\`bash"
+          echo "./scripts/sync-upstream.sh --manual"
+          echo "\`\`\`"

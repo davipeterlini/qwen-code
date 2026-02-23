@@ -125,6 +125,7 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
   const escapeTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [recentPasteTime, setRecentPasteTime] = useState<number | null>(null);
   const pasteTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [lastSubmittedText, setLastSubmittedText] = useState<string>('');
 
   // Large paste placeholder handling
   const [pendingPastes, setPendingPastes] = useState<Map<string, string>>(
@@ -281,6 +282,8 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
       if (shellModeActive) {
         shellHistory.addCommandToHistory(finalValue);
       }
+      // Save the submitted text so it can be restored with ESC
+      setLastSubmittedText(finalValue);
       // Clear the buffer *before* calling onSubmit to prevent potential re-submission
       // if onSubmit triggers a re-render while the buffer still holds the old value.
       buffer.setText('');
@@ -532,6 +535,14 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
         // Handle double ESC for clearing input
         if (escPressCount === 0) {
           if (buffer.text === '') {
+            // If buffer is empty and we have a last submitted text, restore it
+            if (lastSubmittedText !== '') {
+              buffer.setText(lastSubmittedText);
+              setLastSubmittedText('');
+              resetCompletionState();
+              resetEscapeState();
+              return;
+            }
             return;
           }
           setEscPressCount(1);
@@ -870,6 +881,7 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
       pendingPastes,
       parsePlaceholder,
       freePlaceholderId,
+      lastSubmittedText,
     ],
   );
 

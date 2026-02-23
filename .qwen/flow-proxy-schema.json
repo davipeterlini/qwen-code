@@ -1,0 +1,180 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://qwen-code/schemas/flow-proxy.json",
+  "title": "Flow Proxy Configuration",
+  "description": "Configuração de proxy corporativo Flow para Qwen Code",
+  "type": "object",
+  "properties": {
+    "proxy": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Habilita ou desabilita o uso do proxy"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["http", "https", "socks4", "socks5"],
+          "description": "Tipo de protocolo do proxy"
+        },
+        "host": {
+          "type": "string",
+          "description": "Hostname ou IP do servidor proxy"
+        },
+        "port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535,
+          "description": "Porta do servidor proxy"
+        },
+        "protocol": {
+          "type": "string",
+          "enum": ["http", "https"],
+          "description": "Protocolo para comunicação com o proxy"
+        },
+        "auth": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Habilita autenticação no proxy"
+            },
+            "type": {
+              "type": "string",
+              "enum": ["basic", "ntlm", "bearer"],
+              "description": "Tipo de autenticação"
+            },
+            "username": {
+              "type": "string",
+              "description": "Usuário para autenticação"
+            },
+            "password": {
+              "type": "string",
+              "description": "Senha para autenticação (use variáveis de ambiente)"
+            }
+          },
+          "required": ["enabled"]
+        },
+        "bypass": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Lista de hosts que não devem usar o proxy"
+        },
+        "timeout": {
+          "type": "integer",
+          "minimum": 1000,
+          "description": "Timeout de conexão em milissegundos"
+        },
+        "keepAlive": {
+          "type": "boolean",
+          "description": "Mantém conexões persistentes"
+        },
+        "maxSockets": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Número máximo de sockets simultâneos"
+        }
+      },
+      "required": ["enabled", "type", "host", "port"]
+    },
+    "ssl": {
+      "type": "object",
+      "properties": {
+        "rejectUnauthorized": {
+          "type": "boolean",
+          "description": "Rejeita certificados não autorizados"
+        },
+        "certificateAuthority": {
+          "type": "string",
+          "description": "Caminho para o certificado CA customizado"
+        },
+        "verifyServerCert": {
+          "type": "boolean",
+          "description": "Verifica certificado do servidor"
+        }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "description": "Variáveis de ambiente geradas automaticamente",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "retryPolicy": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Habilita política de retry"
+        },
+        "maxRetries": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Número máximo de tentativas"
+        },
+        "retryDelay": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Delay entre tentativas em milissegundos"
+        },
+        "retryOn": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "description": "Códigos HTTP ou erros que devem acionar retry"
+        }
+      }
+    },
+    "logging": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Habilita logging de proxy"
+        },
+        "level": {
+          "type": "string",
+          "enum": ["error", "warn", "info", "debug", "trace"],
+          "description": "Nível de logging"
+        },
+        "logProxyRequests": {
+          "type": "boolean",
+          "description": "Loga requisições através do proxy"
+        },
+        "logProxyResponses": {
+          "type": "boolean",
+          "description": "Loga respostas do proxy"
+        }
+      }
+    },
+    "features": {
+      "type": "object",
+      "properties": {
+        "autoDetect": {
+          "type": "boolean",
+          "description": "Detecta automaticamente configurações de proxy do sistema"
+        },
+        "fallbackToDirect": {
+          "type": "boolean",
+          "description": "Tenta conexão direta se proxy falhar"
+        },
+        "cacheCredentials": {
+          "type": "boolean",
+          "description": "Cacheia credenciais de autenticação"
+        }
+      }
+    }
+  },
+  "required": ["proxy"]
+}

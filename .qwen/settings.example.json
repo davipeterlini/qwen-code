@@ -1,0 +1,94 @@
+{
+  "modelProviders": {
+    "openai": [
+      {
+        "id": "qwen3-coder-plus",
+        "name": "Qwen3-Coder Plus",
+        "baseUrl": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+        "envKey": "DASHSCOPE_API_KEY",
+        "description": "Qwen oficial via Dashscope (Alibaba Cloud)"
+      },
+      {
+        "id": "qwen3-coder-turbo",
+        "name": "Qwen3-Coder Turbo",
+        "baseUrl": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+        "envKey": "DASHSCOPE_API_KEY",
+        "description": "Qwen turbo - mais rápido e econômico"
+      },
+      {
+        "id": "gpt-4",
+        "name": "GPT-4",
+        "baseUrl": "https://api.openai.com/v1",
+        "envKey": "OPENAI_API_KEY",
+        "description": "OpenAI GPT-4"
+      },
+      {
+        "id": "gpt-4-turbo",
+        "name": "GPT-4 Turbo",
+        "baseUrl": "https://api.openai.com/v1",
+        "envKey": "OPENAI_API_KEY",
+        "description": "OpenAI GPT-4 Turbo"
+      }
+    ],
+    "anthropic": [
+      {
+        "id": "claude-3-5-sonnet-20241022",
+        "name": "Claude 3.5 Sonnet",
+        "envKey": "ANTHROPIC_API_KEY",
+        "description": "Anthropic Claude 3.5 Sonnet"
+      },
+      {
+        "id": "claude-3-opus-20240229",
+        "name": "Claude 3 Opus",
+        "envKey": "ANTHROPIC_API_KEY",
+        "description": "Anthropic Claude 3 Opus"
+      }
+    ],
+    "gemini": [
+      {
+        "id": "gemini-2.0-flash-exp",
+        "name": "Gemini 2.0 Flash",
+        "envKey": "GEMINI_API_KEY",
+        "description": "Google Gemini 2.0 Flash"
+      }
+    ]
+  },
+  "env": {
+    "DASHSCOPE_API_KEY": "sk-xxxxxxxxxxxxx",
+    "OPENAI_API_KEY": "sk-xxxxxxxxxxxxx",
+    "ANTHROPIC_API_KEY": "sk-ant-xxxxxxxxxxxxx",
+    "GEMINI_API_KEY": "xxxxxxxxxxxxx",
+    "HTTP_PROXY": "http://proxy.company.com:8080",
+    "HTTPS_PROXY": "http://proxy.company.com:8080",
+    "NO_PROXY": "localhost,127.0.0.1,.local"
+  },
+  "security": {
+    "auth": {
+      "selectedType": "openai",
+      "selectedProvider": "qwen3-coder-plus"
+    }
+  },
+  "model": {
+    "name": "qwen3-coder-plus",
+    "temperature": 0.7,
+    "maxTokens": 4096
+  },
+  "proxy": {
+    "enabled": true,
+    "http": "http://proxy.company.com:8080",
+    "https": "http://proxy.company.com:8080",
+    "noProxy": ["localhost", "127.0.0.1", ".local"],
+    "auth": {
+      "username": "usuario",
+      "password": "senha"
+    }
+  },
+  "sandbox": {
+    "enabled": true,
+    "type": "docker",
+    "network": "bridge"
+  },
+  "telemetry": {
+    "enabled": false
+  }
+}

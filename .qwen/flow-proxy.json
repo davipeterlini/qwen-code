@@ -1,0 +1,55 @@
+{
+  "$schema": "./flow-proxy-schema.json",
+  "description": "Configuração de proxy para Flow - Proxy corporativo para acesso às APIs",
+  "proxy": {
+    "enabled": true,
+    "type": "http",
+    "host": "proxy.flow.company.com",
+    "port": 8080,
+    "protocol": "http",
+    "auth": {
+      "enabled": true,
+      "type": "basic",
+      "username": "${FLOW_PROXY_USER}",
+      "password": "${FLOW_PROXY_PASSWORD}"
+    },
+    "bypass": [
+      "localhost",
+      "127.0.0.1",
+      "*.local",
+      "*.internal",
+      "*.flow.company.com"
+    ],
+    "timeout": 30000,
+    "keepAlive": true,
+    "maxSockets": 50
+  },
+  "ssl": {
+    "rejectUnauthorized": false,
+    "certificateAuthority": "${FLOW_CA_CERT_PATH}",
+    "verifyServerCert": true
+  },
+  "environment": {
+    "HTTP_PROXY": "http://${FLOW_PROXY_USER}:${FLOW_PROXY_PASSWORD}@proxy.flow.company.com:8080",
+    "HTTPS_PROXY": "http://${FLOW_PROXY_USER}:${FLOW_PROXY_PASSWORD}@proxy.flow.company.com:8080",
+    "NO_PROXY": "localhost,127.0.0.1,*.local,*.internal,*.flow.company.com",
+    "NODE_TLS_REJECT_UNAUTHORIZED": "0"
+  },
+  "retryPolicy": {
+    "enabled": true,
+    "maxRetries": 3,
+    "retryDelay": 1000,
+    "retryOn": [502, 503, 504, "ECONNRESET", "ETIMEDOUT"]
+  },
+  "logging": {
+    "enabled": true,
+    "level": "info",
+    "logProxyRequests": false,
+    "logProxyResponses": false
+  },
+  "features": {
+    "autoDetect": true,
+    "fallbackToDirect": false,
+    "cacheCredentials": true
+  }
+}
