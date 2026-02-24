@@ -121,26 +121,20 @@ jobs:
           # Create branch from upstream
           git checkout -b $BRANCH_NAME upstream/${{ env.BASE_BRANCH }}
 
-          # Remove or disable upstream workflows to avoid permission issues
+          # Remove upstream workflows to avoid permission issues
           if [ -d ".github/workflows" ]; then
-            echo "Disabling upstream workflows to avoid permission issues..."
-            for workflow in .github/workflows/*.yml .github/workflows/*.yaml; do
-              if [ -f "$workflow" ] && [ "$(basename $workflow)" != "sync-upstream.yml" ]; then
-                # Rename to .disabled to prevent GitHub from trying to update them
-                mv "$workflow" "${workflow}.disabled" 2>/dev/null || true
-              fi
-            done
+            echo "Removing upstream workflows to avoid permission issues..."
 
-            # Commit the workflow changes
-            if git diff --staged --quiet; then
-              git add .github/workflows/ 2>/dev/null || true
-            fi
+            # Keep only sync-upstream.yml, remove all others
+            find .github/workflows -type f \( -name "*.yml" -o -name "*.yaml" \) ! -name "sync-upstream.yml" -delete
 
-            if ! git diff --cached --quiet; then
+            # Commit the workflow changes if any files were deleted
+            if ! git diff --quiet; then
               git config user.name "github-actions[bot]"
               git config user.email "github-actions[bot]@users.noreply.github.com"
-              git commit -m "chore: disable upstream workflows for sync" \
-                         -m "Upstream workflows are disabled (renamed to .disabled) to avoid permission issues when pushing the merge-back branch. These workflows can be re-enabled after merging if needed." \
+              git add .github/workflows/
+              git commit -m "chore: remove upstream workflows for sync" \
+                         -m "Upstream workflows are removed to avoid permission issues when pushing the merge-back branch. Only sync-upstream.yml is kept." \
                          -m "Co-Authored-By: GitHub Actions <github-actions[bot]@users.noreply.github.com>"
             fi
           fi
