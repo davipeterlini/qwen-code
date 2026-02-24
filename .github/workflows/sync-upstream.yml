@@ -1,5 +1,19 @@
 name: Sync with Upstream Qwen Code
 
+# IMPORTANT: To enable automatic PR creation, you need to create a Personal Access Token (PAT)
+# 1. Go to https://github.com/settings/tokens/new
+# 2. Give it a name (e.g., "Qwen Code Sync")
+# 3. Set expiration (recommended: 90 days)
+# 4. Select scopes: "repo" (full control of private repositories)
+# 5. Generate token and copy it
+# 6. Go to your repository settings: https://github.com/davipeterlini/qwen-code/settings/secrets/actions
+# 7. Click "New repository secret"
+# 8. Name: PAT_TOKEN
+# 9. Value: paste your token
+# 10. Click "Add secret"
+#
+# Without PAT_TOKEN, the workflow will create the merge-back branch but you'll need to create the PR manually
+
 on:
   # Executar manualmente via GitHub UI ou API
   workflow_dispatch:
@@ -44,7 +58,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -146,7 +160,7 @@ jobs:
         id: check_pr
         if: steps.upstream_info.outputs.commits_ahead != '0' && (github.event.inputs.create_pr != 'false' || github.event_name == 'schedule')
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
           PR_NUMBER=$(gh pr list --head ${{ github.event.inputs.branch_name || 'merge-back' }} --base ${{ env.BASE_BRANCH }} --json number --jq '.[0].number' 2>/dev/null || echo "")
           if [ -n "$PR_NUMBER" ]; then
@@ -161,7 +175,7 @@ jobs:
       - name: Create Pull Request
         if: steps.check_pr.outputs.exists == 'false' && steps.upstream_info.outputs.commits_ahead != '0' && (github.event.inputs.create_pr != 'false' || github.event_name == 'schedule')
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
           # Try to create PR, ignoring label errors
           gh pr create \
@@ -239,7 +253,7 @@ jobs:
       - name: Update existing PR
         if: steps.check_pr.outputs.exists == 'true' && steps.upstream_info.outputs.commits_ahead != '0' && (github.event.inputs.create_pr != 'false' || github.event_name == 'schedule')
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
           gh pr edit ${{ steps.check_pr.outputs.number }} \
             --body "$(cat <<EOF
