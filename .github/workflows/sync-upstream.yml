@@ -234,6 +234,14 @@ jobs:
           # Ignore if PR creation fails (might already exist or labels don't exist)
           echo "PR creation attempted"
 
+      - name: Provide manual PR instructions
+        if: steps.check_pr.outputs.exists == 'false' && steps.upstream_info.outputs.commits_ahead != '0'
+        run: |
+          echo "::notice::If automatic PR creation failed, create it manually using:"
+          echo "::notice::gh pr create --repo ${{ github.repository }} --head merge-back --base main --title '🔄 Sync with upstream Qwen Code' --body 'Syncs ${{ steps.upstream_info.outputs.commits_ahead }} commits from upstream'"
+          echo ""
+          echo "Or visit: https://github.com/${{ github.repository }}/compare/main...merge-back"
+
       - name: Update existing PR
         if: steps.check_pr.outputs.exists == 'true' && steps.upstream_info.outputs.commits_ahead != '0' && (github.event.inputs.create_pr != 'false' || github.event_name == 'schedule')
         env:
