@@ -156,6 +156,20 @@ jobs:
           git push -u origin $BRANCH_NAME --force
           echo "Created $BRANCH_NAME branch from upstream/${{ env.BASE_BRANCH }}"
 
+      - name: Wait for branch to be available
+        if: steps.upstream_info.outputs.commits_ahead != '0' && (github.event.inputs.create_pr != 'false' || github.event_name == 'schedule')
+        run: |
+          echo "Waiting for branch to be available in GitHub API..."
+          sleep 5
+
+          # Verify branch exists on remote
+          if git ls-remote --heads origin ${{ github.event.inputs.branch_name || 'merge-back' }} | grep -q "${{ github.event.inputs.branch_name || 'merge-back' }}"; then
+            echo "✅ Branch ${{ github.event.inputs.branch_name || 'merge-back' }} is available on remote"
+          else
+            echo "❌ Branch not found on remote, retrying..."
+            sleep 5
+          fi
+
       - name: Check for existing PR
         id: check_pr
         if: steps.upstream_info.outputs.commits_ahead != '0' && (github.event.inputs.create_pr != 'false' || github.event_name == 'schedule')
@@ -177,8 +191,50 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
+          BRANCH_NAME="${{ github.event.inputs.branch_name || 'merge-back' }}"
+
+          # Debug: show branch info
+          echo "📋 Branch information:"
+          echo "  Head branch: $BRANCH_NAME"
+          echo "  Base branch: ${{ env.BASE_BRANCH }}"
+
+          # Verify branches exist
+          echo ""
+          echo "🔍 Verifying branches..."
+          git fetch origin ${{ env.BASE_BRANCH }} $BRANCH_NAME
+
+          echo "  Local branches:"
+          git branch -a | grep -E "(${BRANCH_NAME}|${{ env.BASE_BRANCH }})" || true
+
+          echo ""
+          echo "  Remote branches:"
+          git ls-remote --heads origin | grep -E "(${BRANCH_NAME}|${{ env.BASE_BRANCH }})" || true
+
+          # Show commit difference
+          echo ""
+          echo "📊 Commit difference:"
+          COMMIT_DIFF=$(git rev-list --count origin/${{ env.BASE_BRANCH }}..origin/$BRANCH_NAME 2>/dev/null || echo "0")
+          echo "  Commits in $BRANCH_NAME not in ${{ env.BASE_BRANCH }}: $COMMIT_DIFF"
+
+          if [ "$COMMIT_DIFF" == "0" ]; then
+            echo ""
+            echo "⚠️  WARNING: No commit difference detected!"
+            echo "This might cause PR creation to fail."
+            echo ""
+            echo "Branch refs:"
+            echo "  ${{ env.BASE_BRANCH }}: $(git rev-parse origin/${{ env.BASE_BRANCH }})"
+            echo "  $BRANCH_NAME: $(git rev-parse origin/$BRANCH_NAME)"
+          fi
+
+          echo ""
+          echo "🚀 Creating pull request..."
+
+          # Switch back to main before creating PR
+          git checkout ${{ env.BASE_BRANCH }}
+
           # Try to create PR, ignoring label errors
           gh pr create \
+            --repo ${{ github.repository }} \
             --title "🔄 Sync with upstream Qwen Code" \
             --body "$(cat <<EOF
           ## 🔄 Sync with Upstream Repository
@@ -256,6 +312,7 @@ jobs:
           GH_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
           gh pr edit ${{ steps.check_pr.outputs.number }} \
+            --repo ${{ github.repository }} \
             --body "$(cat <<EOF
           ## 🔄 Sync with Upstream Repository (Updated)
 
