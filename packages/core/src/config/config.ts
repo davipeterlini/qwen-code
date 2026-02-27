@@ -705,9 +705,9 @@ export class Config {
 
     this.subagentManager = new SubagentManager(this);
     this.skillManager = new SkillManager(this);
-    this.skillActivationService = new SkillActivationService(this);
-    this.hookService = new HookService(this);
-    this.checkpointService = new CheckpointService(this);
+    this.skillActivationService = new SkillActivationService();
+    this.hookService = new HookService();
+    this.checkpointService = new CheckpointService();
     this.markdownCommandLoader = new MarkdownCommandLoader();
     await this.skillManager.startWatching();
     await this.hookService.initialize();

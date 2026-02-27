@@ -78,6 +78,10 @@ export class CheckpointService {
    * Load checkpoints from disk
    */
   private async loadCheckpoints(): Promise<void> {
+    if (!this.config) {
+      return;
+    }
+
     const checkpointsDir = path.join(
       this.config.storage.getProjectRoot(),
       CHECKPOINTS_DIR,
@@ -107,6 +111,10 @@ export class CheckpointService {
   async createCheckpoint(
     options: CheckpointCreateOptions = {},
   ): Promise<Checkpoint> {
+    if (!this.config) {
+      throw new Error('CheckpointService not initialized');
+    }
+
     const {
       label,
       isAuto = false,
@@ -272,6 +280,16 @@ export class CheckpointService {
     checkpointId: string,
     options: RewindOptions,
   ): Promise<RewindResult> {
+    if (!this.config) {
+      return {
+        success: false,
+        error: 'CheckpointService not initialized',
+        filesRestored: [],
+        filesFailed: [],
+        dryRun: options.dryRun ?? false,
+      };
+    }
+
     const {
       restoreMode = 'both',
       createCheckpoint = true,
@@ -435,6 +453,10 @@ export class CheckpointService {
    * Delete a checkpoint
    */
   async deleteCheckpoint(checkpointId: string): Promise<boolean> {
+    if (!this.config) {
+      return false;
+    }
+
     const checkpoint = this.checkpoints.get(checkpointId);
     if (!checkpoint) {
       return false;
@@ -461,6 +483,10 @@ export class CheckpointService {
    * Save checkpoint to disk
    */
   private async saveCheckpoint(checkpoint: Checkpoint): Promise<void> {
+    if (!this.config) {
+      return;
+    }
+
     const checkpointFile = path.join(
       this.config.storage.getProjectRoot(),
       CHECKPOINTS_DIR,
@@ -522,6 +548,10 @@ export class CheckpointService {
     oldestTimestamp?: number;
     newestTimestamp?: number;
   } {
+    if (!this.config) {
+      return { total: 0, auto: 0, manual: 0 };
+    }
+
     const checkpoints = Array.from(this.checkpoints.values());
     const auto = checkpoints.filter((c) => c.metadata.isAuto).length;
     const manual = checkpoints.length - auto;
