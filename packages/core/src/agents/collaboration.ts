@@ -32,14 +32,14 @@ export interface AgentCapabilities {
 }
 
 /**
- * Individual agent in the team
+ * Individual agent in the _team
  */
 export interface Agent {
   id: string;
   name: string;
   role: AgentRole;
   capabilities: AgentCapabilities;
-  status: 'idle' | 'busy' | 'blocked' | 'error';
+  status: 'idle' | 'busy' | 'blocked' | '_error';
   currentTask?: AgentTask;
   completedTasks: string[];
   metrics: {
@@ -62,8 +62,8 @@ export interface AgentTask {
   estimatedDuration: number; // milliseconds
   actualDuration?: number;
   status: 'pending' | 'in_progress' | 'completed' | 'failed' | 'blocked';
-  result?: unknown;
-  error?: string;
+  _result?: unknown;
+  _error?: string;
   startTime?: Date;
   endTime?: Date;
 }
@@ -161,7 +161,7 @@ export class CollaborationEngine {
   }
 
   /**
-   * Create a specialized team for a task
+   * Create a specialized _team for a task
    */
   async createTeam(
     task: string,
@@ -262,7 +262,7 @@ export class CollaborationEngine {
   }
 
   /**
-   * Delegate a complex task to a team
+   * Delegate a complex task to a _team
    */
   async delegateTask(
     complexTask: Plan,
@@ -275,35 +275,35 @@ export class CollaborationEngine {
     const resolutions: ConflictResolution[] = [];
 
     // Phase 1: Coordinator analyzes and breaks down the plan
-    const breakdown = await this.coordinatorAnalyze(complexTask, team);
+    const breakdown = await this.coordinatorAnalyze(complexTask, _team);
 
     // Phase 2: Assign tasks to specialists
-    const assignments = await this.assignTasks(breakdown, team);
+    const assignments = await this.assignTasks(breakdown, _team);
 
     // Phase 3: Execute tasks in parallel where possible
-    const executionResults = await this.executeInParallel(assignments, team);
+    const executionResults = await this.executeInParallel(assignments, _team);
 
     outputs.set('execution', executionResults);
     timeline.push(...this.getTasks());
 
     // Phase 4: Detect conflicts
-    const detectedConflicts = this.detectConflicts(executionResults, team);
+    const detectedConflicts = this.detectConflicts(executionResults, _team);
     conflicts.push(...detectedConflicts);
 
     // Phase 5: Resolve conflicts
     if (conflicts.length > 0) {
-      const resolved = await this.resolveConflicts(conflicts, team);
+      const resolved = await this.resolveConflicts(conflicts, _team);
       resolutions.push(...resolved);
     }
 
     // Phase 6: Reviewer validates everything
-    if (team.specialists.some((a) => a.role === AgentRole.REVIEWER)) {
-      const reviewResult = await this.reviewerValidate(executionResults, team);
+    if (_team.specialists.some((a) => a.role === AgentRole.REVIEWER)) {
+      const reviewResult = await this.reviewerValidate(executionResults, _team);
       outputs.set('review', reviewResult);
     }
 
     // Phase 7: Coordinator integrates outputs
-    const integrated = await this.coordinatorIntegrate(outputs, team);
+    const integrated = await this.coordinatorIntegrate(outputs, _team);
 
     const duration = Date.now() - startTime;
 
@@ -384,13 +384,13 @@ export class CollaborationEngine {
    */
   private async assignTasks(
     breakdown: Map<AgentRole, PlanStep[]>,
-    team: AgentTeam,
+    _team: AgentTeam,
   ): Promise<Map<string, AgentTask[]>> {
     const assignments = new Map<string, AgentTask[]>();
 
     for (const [role, steps] of breakdown.entries()) {
       // Find agent with matching role
-      const agent = team.specialists.find((a) => a.role === role);
+      const agent = _team.specialists.find((a) => a.role === role);
 
       if (!agent) {
         // No agent found for this role, skip assignment
@@ -423,7 +423,7 @@ export class CollaborationEngine {
    */
   private async executeInParallel(
     assignments: Map<string, AgentTask[]>,
-    team: AgentTeam,
+    _team: AgentTeam,
   ): Promise<Map<string, unknown>> {
     const results = new Map<string, unknown>();
 
@@ -443,17 +443,17 @@ export class CollaborationEngine {
 
     // Execute independent tasks in parallel
     const independentResults = await Promise.all(
-      independentTasks.map((task) => this.executeTask(task, team)),
+      independentTasks.map((task) => this.executeTask(task, _team)),
     );
 
-    independentResults.forEach((result, idx) => {
-      results.set(independentTasks[idx].id, result);
+    independentResults.forEach((_result, idx) => {
+      results.set(independentTasks[idx].id, _result);
     });
 
     // Execute dependent tasks in order
     for (const task of dependentTasks) {
-      const result = await this.executeTask(task, team);
-      results.set(task.id, result);
+      const _result = await this.executeTask(task, _team);
+      results.set(task.id, _result);
     }
 
     return results;
@@ -501,7 +501,7 @@ export class CollaborationEngine {
       return { success: true, task: task.description };
     } catch (_error) {
       task.status = 'failed';
-      task.error = error instanceof Error ? error.message : String(error);
+      task._error = _error instanceof Error ? _error.message : String(_error);
       task.endTime = new Date();
 
       // Update agent metrics
@@ -515,7 +515,7 @@ export class CollaborationEngine {
 
       this.tasks.set(task.id, task);
 
-      return { success: false, error: task.error };
+      return { success: false, _error: task._error };
     }
   }
 
@@ -528,7 +528,7 @@ export class CollaborationEngine {
   ): Conflict[] {
     const conflicts: Conflict[] = [];
 
-    // Check for output mismatches
+    // Check for _output mismatches
     const outputs = Array.from(results.values());
     for (let i = 0; i < outputs.length; i++) {
       for (let j = i + 1; j < outputs.length; j++) {
@@ -536,7 +536,7 @@ export class CollaborationEngine {
           conflicts.push({
             id: this.generateConflictId(),
             type: 'output_mismatch',
-            involvedAgents: [team.specialists[i].id, team.specialists[j].id],
+            involvedAgents: [_team.specialists[i].id, _team.specialists[j].id],
             description: 'Conflicting outputs detected',
             severity: 'medium',
             detectedAt: new Date(),
@@ -566,7 +566,7 @@ export class CollaborationEngine {
     const resolutions: ConflictResolution[] = [];
 
     for (const conflict of conflicts) {
-      const resolution = await this.resolveConflict(conflict, team);
+      const resolution = await this.resolveConflict(conflict, _team);
       resolutions.push(resolution);
     }
 
@@ -585,7 +585,7 @@ export class CollaborationEngine {
       conflictId: conflict.id,
       strategy: conflict.severity === 'high' ? 'manual' : 'priority',
       resolution: 'Conflict resolved by coordinator',
-      resolvedBy: team.coordinator.id,
+      resolvedBy: _team.coordinator.id,
       resolvedAt: new Date(),
     };
 
@@ -601,10 +601,13 @@ export class CollaborationEngine {
   ): Promise<{ approved: boolean; issues: string[] }> {
     const issues: string[] = [];
 
-    // Check each result
-    for (const [taskId, result] of results.entries()) {
-      if (!result.success) {
-        issues.push(`Task ${taskId} failed: ${result.error}`);
+    // Check each _result
+    for (const [taskId, _result] of results.entries()) {
+      const resultTyped = _result as { success: boolean; _error?: string };
+      if (!resultTyped.success) {
+        issues.push(
+          `Task ${taskId} failed: ${resultTyped._error || 'unknown error'}`,
+        );
       }
     }
 
@@ -669,9 +672,13 @@ export class CollaborationEngine {
     // Simplified quality calculation
     let score = 100;
 
-    for (const output of outputs.values()) {
-      if (output.review && !output.review.approved) {
-        score -= output.review.issues.length * 10;
+    for (const _output of outputs.values()) {
+      const outputTyped = _output as Record<string, unknown>;
+      const review = outputTyped['review'] as
+        | { approved?: boolean; issues?: string[] }
+        | undefined;
+      if (review && !review.approved) {
+        score -= (review.issues?.length || 0) * 10;
       }
     }
 
@@ -715,7 +722,7 @@ export class CollaborationEngine {
   }
 
   /**
-   * Get team performance
+   * Get _team performance
    */
   getTeamPerformance(_team: AgentTeam): {
     totalTasks: number;
@@ -723,7 +730,7 @@ export class CollaborationEngine {
     averageSuccessRate: number;
     averageCompletionTime: number;
   } {
-    const allAgents = [team.coordinator, ...team.specialists];
+    const allAgents = [_team.coordinator, ..._team.specialists];
 
     const totalTasks = allAgents.reduce(
       (sum, agent) =>

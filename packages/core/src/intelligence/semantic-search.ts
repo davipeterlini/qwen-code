@@ -30,7 +30,7 @@ export interface SearchMatch {
 }
 
 /**
- * Search options
+ * Search _options
  */
 export interface SearchOptions {
   mode: 'exact' | 'fuzzy' | 'semantic' | 'hybrid';
@@ -80,8 +80,8 @@ export class SemanticSearchEngine {
   async buildIndex(graph: CodebaseGraph): Promise<void> {
     this.graph = graph;
 
-    for (const [filePath, node] of graph.nodes.entries()) {
-      await this.indexFile(filePath, node);
+    for (const [filePath, _node] of graph.nodes.entries()) {
+      await this.indexFile(filePath, _node);
     }
 
     this.index.metadata.indexedAt = new Date();
@@ -195,30 +195,30 @@ export class SemanticSearchEngine {
 
     const results: SearchResult[] = [];
 
-    switch (options.mode) {
+    switch (_options.mode) {
       case 'exact': {
-        results.push(...(await this.exactSearch(query, options)));
+        results.push(...(await this.exactSearch(query, _options)));
         break;
       }
       case 'fuzzy': {
-        results.push(...(await this.fuzzySearch(query, options)));
+        results.push(...(await this.fuzzySearch(query, _options)));
         break;
       }
       case 'semantic': {
-        results.push(...(await this.semanticSearch(query, options)));
+        results.push(...(await this.semanticSearch(query, _options)));
         break;
       }
       case 'hybrid': {
         // Combine all methods
-        const exact = await this.exactSearch(query, options);
-        const fuzzy = await this.fuzzySearch(query, options);
-        const semantic = await this.semanticSearch(query, options);
+        const exact = await this.exactSearch(query, _options);
+        const fuzzy = await this.fuzzySearch(query, _options);
+        const semantic = await this.semanticSearch(query, _options);
 
         // Merge and deduplicate
         const combined = new Map<string, SearchResult>();
 
         for (const result of [...exact, ...fuzzy, ...semantic]) {
-          const key = result.node.path;
+          const key = result._node.path;
           if (!combined.has(key)) {
             combined.set(key, result);
           } else {
@@ -232,7 +232,7 @@ export class SemanticSearchEngine {
         break;
       }
       default: {
-        results.push(...(await this.exactSearch(query, options)));
+        results.push(...(await this.exactSearch(query, _options)));
         break;
       }
     }
@@ -240,29 +240,29 @@ export class SemanticSearchEngine {
     // Apply filters
     let filtered = results;
 
-    if (!options.includeTests) {
+    if (!_options.includeTests) {
       filtered = filtered.filter(
         (r) =>
-          !r.node.path.includes('.test.') && !r.node.path.includes('.spec.'),
+          !r._node.path.includes('.test.') && !r._node.path.includes('.spec.'),
       );
     }
 
-    if (options.fileTypes) {
+    if (_options.fileTypes) {
       filtered = filtered.filter((r) =>
-        options.fileTypes!.some((ext) => r.node.path.endsWith(ext)),
+        _options.fileTypes!.some((ext) => r._node.path.endsWith(ext)),
       );
     }
 
-    if (options.minScore) {
-      filtered = filtered.filter((r) => r.score >= options.minScore!);
+    if (_options.minScore) {
+      filtered = filtered.filter((r) => r.score >= _options.minScore!);
     }
 
     // Sort by score
     filtered.sort((a, b) => b.score - a.score);
 
     // Limit results
-    if (options.maxResults) {
-      filtered = filtered.slice(0, options.maxResults);
+    if (_options.maxResults) {
+      filtered = filtered.slice(0, _options.maxResults);
     }
 
     return filtered;
@@ -276,9 +276,9 @@ export class SemanticSearchEngine {
     _options: SearchOptions,
   ): Promise<SearchResult[]> {
     const results: SearchResult[] = [];
-    const searchTerm = options.caseSensitive ? query : query.toLowerCase();
+    const searchTerm = _options.caseSensitive ? query : query.toLowerCase();
 
-    for (const [filePath, node] of this.graph!.nodes.entries()) {
+    for (const [filePath, _node] of this.graph!.nodes.entries()) {
       try {
         const content = await fs.readFile(filePath, 'utf-8');
 
@@ -286,9 +286,9 @@ export class SemanticSearchEngine {
         const lines = content.split('\n');
 
         lines.forEach((line, lineNum) => {
-          const searchLine = options.caseSensitive ? line : line.toLowerCase();
+          const searchLine = _options.caseSensitive ? line : line.toLowerCase();
 
-          if (options.wholeWord) {
+          if (_options.wholeWord) {
             const regex = new RegExp(`\\b${searchTerm}\\b`, 'g');
             const lineMatches = searchLine.match(regex);
             if (lineMatches) {
@@ -319,7 +319,7 @@ export class SemanticSearchEngine {
 
         if (matches.length > 0) {
           results.push({
-            node,
+            _node,
             score: 1.0,
             matches,
             context: this.extractContext(content, matches[0].location.line),
@@ -362,14 +362,14 @@ export class SemanticSearchEngine {
 
     // Score each candidate
     for (const filePath of candidateFiles) {
-      const node = this.graph!.nodes.get(filePath);
-      if (!node) continue;
+      const _node = this.graph!.nodes.get(filePath);
+      if (!_node) continue;
 
       const score = await this.calculateFuzzyScore(filePath, queryTerms);
 
       if (score > 0.3) {
         results.push({
-          node,
+          _node,
           score,
           matches: [
             {
@@ -476,11 +476,11 @@ export class SemanticSearchEngine {
 
     // Create results
     for (const { path, score } of similarities.slice(0, 20)) {
-      const node = this.graph!.nodes.get(path);
-      if (!node) continue;
+      const _node = this.graph!.nodes.get(path);
+      if (!_node) continue;
 
       results.push({
-        node,
+        _node,
         score,
         matches: [
           {
@@ -560,12 +560,12 @@ export class SemanticSearchEngine {
    */
   async findByContent(
     query: string,
-    options?: Partial<SearchOptions>,
+    _options?: Partial<SearchOptions>,
   ): Promise<SearchResult[]> {
     return this.search(query, {
       mode: 'hybrid',
       maxResults: 50,
-      ...options,
+      ..._options,
     });
   }
 

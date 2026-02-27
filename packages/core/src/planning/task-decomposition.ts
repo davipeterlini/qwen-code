@@ -109,18 +109,20 @@ export class TaskDecomposer {
   /**
    * Decompose a complex task into atomic subtasks
    */
-  async decompose(context: DecompositionContext): Promise<DecompositionResult> {
+  async decompose(
+    _context: DecompositionContext,
+  ): Promise<DecompositionResult> {
     // Step 1: Analyze task complexity
-    const complexity = await this.analyzeComplexity(context);
+    const complexity = await this.analyzeComplexity(_context);
 
     // Step 2: Choose optimal strategy
-    const strategy = this.chooseStrategy(complexity, context);
+    const strategy = this.chooseStrategy(complexity, _context);
 
     // Step 3: Decompose using chosen strategy
     const subtasks = await this.decomposeByStrategy(_context, strategy);
 
     // Step 4: Identify dependencies
-    const dependencies = this.identifyDependencies(subtasks, context);
+    const dependencies = this.identifyDependencies(subtasks, _context);
 
     // Step 5: Find critical path
     const criticalPath = this.findCriticalPath(subtasks, dependencies);
@@ -135,7 +137,7 @@ export class TaskDecomposer {
     const totalDuration = this.estimateTotalDuration(subtasks, criticalPath);
 
     return {
-      originalTask: context.task,
+      originalTask: _context.task,
       strategy,
       subtasks,
       dependencies,
@@ -154,9 +156,9 @@ export class TaskDecomposer {
    * Analyze task complexity
    */
   private async analyzeComplexity(
-    context: DecompositionContext,
+    _context: DecompositionContext,
   ): Promise<ComplexityEstimation> {
-    const task = context.task.toLowerCase();
+    const task = _context.task.toLowerCase();
     let score = 0;
     let codeSize = 10;
     let dependencies = 5;
@@ -210,9 +212,9 @@ export class TaskDecomposer {
       risk += 6;
     }
 
-    // Analyze codebase context
-    if (context.codebaseGraph) {
-      const nodes = context.codebaseGraph.nodes.size;
+    // Analyze codebase _context
+    if (_context.codebaseGraph) {
+      const nodes = _context.codebaseGraph.nodes.size;
       if (nodes > 100) score += 10;
       if (nodes > 500) score += 20;
 
@@ -220,9 +222,9 @@ export class TaskDecomposer {
     }
 
     // Adjust based on project memory
-    if (context.projectMemory) {
+    if (_context.projectMemory) {
       // TODO: Implement getIssues method in ProjectMemory
-      // const issues = context.projectMemory.getIssues('high');
+      // const issues = _context.projectMemory.getIssues('high');
       // unknowns += issues.length;
       // score += issues.length * 5;
     }
@@ -255,11 +257,11 @@ export class TaskDecomposer {
    */
   private chooseStrategy(
     complexity: ComplexityEstimation,
-    context: DecompositionContext,
+    _context: DecompositionContext,
   ): DecompositionStrategy {
     // User preference takes priority
-    if (context.userPreferences?.preferredStrategy) {
-      return context.userPreferences.preferredStrategy;
+    if (_context.userPreferences?.preferredStrategy) {
+      return _context.userPreferences.preferredStrategy;
     }
 
     // Choose based on complexity
@@ -275,7 +277,7 @@ export class TaskDecomposer {
       return DecompositionStrategy.LAYER_BASED;
     }
 
-    if (context.task.includes('feature')) {
+    if (_context.task.includes('feature')) {
       return DecompositionStrategy.FEATURE_BASED;
     }
 
@@ -286,35 +288,35 @@ export class TaskDecomposer {
    * Decompose using specific strategy
    */
   private async decomposeByStrategy(
-    context: DecompositionContext,
+    _context: DecompositionContext,
     strategy: DecompositionStrategy,
   ): Promise<Subtask[]> {
     switch (strategy) {
       case DecompositionStrategy.TOP_DOWN:
-        return this.decomposeTopDown(context);
+        return this.decomposeTopDown(_context);
       case DecompositionStrategy.BOTTOM_UP:
-        return this.decomposeBottomUp(context);
+        return this.decomposeBottomUp(_context);
       case DecompositionStrategy.FEATURE_BASED:
-        return this.decomposeFeatureBased(context);
+        return this.decomposeFeatureBased(_context);
       case DecompositionStrategy.LAYER_BASED:
-        return this.decomposeLayerBased(context);
+        return this.decomposeLayerBased(_context);
       case DecompositionStrategy.DEPENDENCY_BASED:
-        return this.decomposeDependencyBased(context);
+        return this.decomposeDependencyBased(_context);
       default:
-        return this.decomposeTopDown(context);
+        return this.decomposeTopDown(_context);
     }
   }
 
   /**
    * Top-down decomposition
    */
-  private decomposeTopDown(context: DecompositionContext): Subtask[] {
+  private decomposeTopDown(_context: DecompositionContext): Subtask[] {
     const subtasks: Subtask[] = [];
 
     // Phase 1: Analysis
     subtasks.push({
       id: 'analysis-1',
-      description: `Analyze requirements for: ${context.task}`,
+      description: `Analyze requirements for: ${_context.task}`,
       type: 'analysis',
       complexity: {
         score: 20,
@@ -451,19 +453,19 @@ export class TaskDecomposer {
   /**
    * Bottom-up decomposition
    */
-  private decomposeBottomUp(context: DecompositionContext): Subtask[] {
+  private decomposeBottomUp(_context: DecompositionContext): Subtask[] {
     // Start with smallest units and build up
-    return this.decomposeTopDown(context).reverse();
+    return this.decomposeTopDown(_context).reverse();
   }
 
   /**
    * Feature-based decomposition
    */
-  private decomposeFeatureBased(context: DecompositionContext): Subtask[] {
+  private decomposeFeatureBased(_context: DecompositionContext): Subtask[] {
     const subtasks: Subtask[] = [];
 
     // Extract features from task description
-    const features = this.extractFeatures(context.task);
+    const features = this.extractFeatures(_context.task);
 
     features.forEach((feature, idx) => {
       subtasks.push({
@@ -530,9 +532,9 @@ export class TaskDecomposer {
   /**
    * Dependency-based decomposition
    */
-  private decomposeDependencyBased(context: DecompositionContext): Subtask[] {
+  private decomposeDependencyBased(_context: DecompositionContext): Subtask[] {
     // Analyze dependencies from codebase graph
-    const subtasks = this.decomposeTopDown(context);
+    const subtasks = this.decomposeTopDown(_context);
 
     // Reorder based on dependencies
     return subtasks.sort(

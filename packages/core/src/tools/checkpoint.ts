@@ -10,6 +10,7 @@ import {
   Kind,
   type ToolResult,
 } from './tools.js';
+
 import { ToolNames, ToolDisplayNames } from './tool-names.js';
 import type { Config } from '../config/config.js';
 import type { Checkpoint } from '../services/gitService.js';
@@ -59,7 +60,7 @@ class CheckpointToolInvocation extends BaseToolInvocation<
         returnDisplay: 'GitService not available',
         error: {
           message: 'GitService not available',
-          type: 'CHECKPOINT_ERROR' as unknown,
+          type: undefined,
         },
       };
     }
@@ -96,7 +97,7 @@ class CheckpointToolInvocation extends BaseToolInvocation<
             returnDisplay: 'Missing checkpoint_id',
             error: {
               message: 'checkpoint_id is required',
-              type: 'CHECKPOINT_ERROR' as unknown,
+              type: undefined,
             },
           };
         }
@@ -115,7 +116,7 @@ class CheckpointToolInvocation extends BaseToolInvocation<
             returnDisplay: 'Cannot undo',
             error: {
               message: 'No previous checkpoint',
-              type: 'CHECKPOINT_ERROR' as unknown,
+              type: undefined,
             },
           };
         }
@@ -135,7 +136,7 @@ class CheckpointToolInvocation extends BaseToolInvocation<
             returnDisplay: 'Cannot redo',
             error: {
               message: 'No next checkpoint',
-              type: 'CHECKPOINT_ERROR' as unknown,
+              type: undefined,
             },
           };
         }

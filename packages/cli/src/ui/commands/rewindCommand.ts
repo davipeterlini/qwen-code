@@ -84,7 +84,7 @@ For now, use git to restore files:
     // Filter by partial argument
     if (partialArg) {
       return suggestions.filter((s) =>
-        s.label.toLowerCase().includes(partialArg.toLowerCase()),
+        (s.label || '').toLowerCase().includes(partialArg.toLowerCase()),
       );
     }
 

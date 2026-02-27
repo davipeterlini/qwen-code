@@ -501,7 +501,7 @@ export class PlanningEngine {
 
         completedSteps++;
         plan.metadata.completedSteps = completedSteps;
-      } catch (_error) {
+      } catch (error) {
         step.result = {
           success: false,
           error: error instanceof Error ? error.message : String(error),

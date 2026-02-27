@@ -29,7 +29,7 @@ export interface TestResult {
 export interface TestFailure {
   testName: string;
   testFile: string;
-  error: string;
+  _error: string;
   stack?: string;
 }
 
@@ -150,7 +150,6 @@ export class TestDrivenWorkflow {
     // Check for regressions
     if (comparison.hasRegressions) {
       // Suggest fixes
-      const _fixes = await this.suggestFixes(comparison.regressions);
     }
 
     return newResults;
@@ -242,10 +241,10 @@ export class TestDrivenWorkflow {
       return this.parseTestOutput(stdout + stderr);
     } catch (_error) {
       // Tests failed
-      if (error instanceof Error && 'stdout' in error && 'stderr' in error) {
+      if (_error instanceof Error && 'stdout' in _error && 'stderr' in _error) {
         const output =
-          (error as unknown & { stdout: string; stderr: string }).stdout +
-          (error as unknown & { stdout: string; stderr: string }).stderr;
+          (_error as unknown & { stdout: string; stderr: string }).stdout +
+          (_error as unknown & { stdout: string; stderr: string }).stderr;
         return this.parseTestOutput(output);
       }
 
@@ -259,7 +258,7 @@ export class TestDrivenWorkflow {
           {
             testName: 'Test execution',
             testFile: '',
-            error: error instanceof Error ? error.message : String(error),
+            _error: _error instanceof Error ? _error.message : String(_error),
           },
         ],
       };
@@ -309,12 +308,12 @@ export class TestDrivenWorkflow {
     for (const block of failureBlocks) {
       const lines = block.split('\n');
       const testName = lines[0]?.trim() || 'Unknown test';
-      const error = lines.slice(1).join('\n').trim();
+      const _error = lines.slice(1).join('\n').trim();
 
       result.failures.push({
         testName,
         testFile: '',
-        error,
+        _error,
       });
     }
 
@@ -409,35 +408,7 @@ export class TestDrivenWorkflow {
     };
   }
 
-  /**
-   * Suggest fixes for test failures
-   */
-  private async suggestFixes(failures: TestFailure[]): Promise<string[]> {
-    const suggestions: string[] = [];
-
-    for (const failure of failures) {
-      // Analyze error message
-      if (failure.error.includes('TypeError')) {
-        suggestions.push(
-          `Fix type error in ${failure.testName}: Check type definitions and interfaces`,
-        );
-      } else if (failure.error.includes('undefined')) {
-        suggestions.push(
-          `Fix undefined error in ${failure.testName}: Ensure all variables are properly initialized`,
-        );
-      } else if (failure.error.includes('expected')) {
-        suggestions.push(
-          `Fix assertion in ${failure.testName}: Update expected values or fix implementation`,
-        );
-      } else {
-        suggestions.push(
-          `Review ${failure.testName}: ${failure.error.slice(0, 100)}...`,
-        );
-      }
-    }
-
-    return suggestions;
-  }
+  // _suggestFixes removed - reserved for future use
 
   /**
    * Generate missing tests for uncovered code

@@ -253,7 +253,7 @@ export interface QualityAlert {
  */
 export interface MetricsHistory {
   /** Project path */
-  projectPath: string;
+  _projectPath: string;
 
   /** Historical snapshots */
   snapshots: QualityMetrics[];
@@ -374,26 +374,26 @@ export function createQualityMonitor(config?: Partial<DashboardConfig>) {
     /**
      * Collects current quality metrics
      */
-    async collectMetrics(projectPath: string): Promise<QualityMetrics> {
+    async collectMetrics(_projectPath: string): Promise<QualityMetrics> {
       const files = await glob('**/*.{ts,tsx,js,jsx}', {
-        cwd: __projectPath,
+        cwd: _projectPath,
         ignore: ['**/node_modules/**', '**/dist/**', '**/build/**'],
       });
 
       // Code quality analysis
-      const codeQuality = await analyzeCodeQuality(__projectPath, files);
+      const codeQuality = await analyzeCodeQuality(_projectPath, files);
 
       // Security analysis
-      const security = await analyzeSecurityMetrics(__projectPath, files);
+      const security = await analyzeSecurityMetrics(_projectPath, files);
 
       // Performance analysis
-      const performance = await analyzePerformanceMetrics(projectPath);
+      const performance = await analyzePerformanceMetrics(_projectPath);
 
       // Coverage analysis
-      const coverage = await analyzeCoverageMetrics(projectPath);
+      const coverage = await analyzeCoverageMetrics(_projectPath);
 
       // Dependencies analysis
-      const dependencies = await analyzeDependencies(projectPath);
+      const dependencies = await analyzeDependencies(_projectPath);
 
       // Calculate overall score
       const overallScore = calculateOverallScore({
@@ -687,21 +687,21 @@ export function createQualityMonitor(config?: Partial<DashboardConfig>) {
       _projectPath: string,
       previous?: QualityMetrics,
     ): Promise<DashboardSnapshot> {
-      const current = await this.collectMetrics(projectPath);
+      const current = await this.collectMetrics(_projectPath);
       const regressions = previous
         ? await this.detectRegressions(current, previous)
         : [];
       await this.generateAlerts(current, regressions);
 
       // Load history for trends
-      const history = await loadMetricsHistory(projectPath);
+      const history = await loadMetricsHistory(_projectPath);
       history.snapshots.push(current);
       const trends = finalConfig.showTrends
         ? await this.analyzeTrends(history)
         : [];
 
       // Save updated history
-      await saveMetricsHistory(__projectPath, history);
+      await saveMetricsHistory(_projectPath, history);
 
       const activeAlerts = Array.from(alerts.values()).filter(
         (a) => !a.acknowledged,
@@ -919,7 +919,7 @@ async function analyzeCodeQuality(
 
   for (const file of files) {
     try {
-      const content = readFileSync(join(__projectPath, file), 'utf-8');
+      const content = readFileSync(join(_projectPath, file), 'utf-8');
       const lines = content.split('\n').length;
       totalLines += lines;
 
@@ -968,7 +968,7 @@ async function analyzeSecurityMetrics(
 
   for (const file of files) {
     try {
-      const content = readFileSync(join(__projectPath, file), 'utf-8');
+      const content = readFileSync(join(_projectPath, file), 'utf-8');
       const lines = content.split('\n');
 
       // Check for common security issues
@@ -1083,7 +1083,7 @@ async function analyzeCoverageMetrics(
   _projectPath: string,
 ): Promise<QualityMetrics['coverage']> {
   // Try to read coverage report if it exists
-  const coveragePath = join(__projectPath, 'coverage', 'coverage-summary.json');
+  const coveragePath = join(_projectPath, 'coverage', 'coverage-summary.json');
 
   if (existsSync(coveragePath)) {
     try {
@@ -1128,7 +1128,7 @@ async function analyzeCoverageMetrics(
 async function analyzeDependencies(
   _projectPath: string,
 ): Promise<QualityMetrics['dependencies']> {
-  const packageJsonPath = join(__projectPath, 'package.json');
+  const packageJsonPath = join(_projectPath, 'package.json');
 
   if (!existsSync(packageJsonPath)) {
     return {
@@ -1274,11 +1274,11 @@ function calculateTrend(metric: string, values: number[]): MetricTrend {
 async function loadMetricsHistory(
   _projectPath: string,
 ): Promise<MetricsHistory> {
-  const historyPath = join(__projectPath, '.qwen-code', 'metrics-history.json');
+  const historyPath = join(_projectPath, '.qwen-code', 'metrics-history.json');
 
   if (!existsSync(historyPath)) {
     return {
-      __projectPath,
+      _projectPath,
       snapshots: [],
       trends: [],
     };
@@ -1289,15 +1289,15 @@ async function loadMetricsHistory(
     const history = JSON.parse(data);
 
     // Parse dates
-    history.snapshots = history.snapshots.map((s: unknown) => ({
+    history.snapshots = history.snapshots.map((s: Record<string, unknown>) => ({
       ...s,
-      timestamp: new Date(s.timestamp),
+      timestamp: new Date(s['timestamp'] as string),
     }));
 
     return history;
   } catch (_error) {
     return {
-      __projectPath,
+      _projectPath,
       snapshots: [],
       trends: [],
     };
@@ -1311,7 +1311,7 @@ async function saveMetricsHistory(
   _projectPath: string,
   history: MetricsHistory,
 ): Promise<void> {
-  const qwenDir = join(__projectPath, '.qwen-code');
+  const qwenDir = join(_projectPath, '.qwen-code');
   if (!existsSync(qwenDir)) {
     mkdirSync(qwenDir, { recursive: true });
   }

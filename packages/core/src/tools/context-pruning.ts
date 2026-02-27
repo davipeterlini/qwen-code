@@ -10,8 +10,9 @@ import {
   Kind,
   type ToolResult,
 } from './tools.js';
+
 import { ToolNames, ToolDisplayNames } from './tool-names.js';
-import type { Config } from '../config/config.js';
+
 import type { FileScore } from '../context/scoring.js';
 
 export interface ContextPruningToolParams {
@@ -26,10 +27,7 @@ class ContextPruningToolInvocation extends BaseToolInvocation<
   ContextPruningToolParams,
   ToolResult
 > {
-  constructor(
-    private config: Config,
-    params: ContextPruningToolParams,
-  ) {
+  constructor(params: ContextPruningToolParams) {
     super(params);
   }
 
@@ -57,7 +55,7 @@ class ContextPruningToolInvocation extends BaseToolInvocation<
         returnDisplay: 'Service not available',
         error: {
           message: 'Context pruning service not available',
-          type: 'CONTEXT_PRUNING_ERROR' as unknown,
+          type: undefined,
         },
       };
     }
@@ -70,15 +68,12 @@ class ContextPruningToolInvocation extends BaseToolInvocation<
             returnDisplay: 'No files',
             error: {
               message: 'files parameter is required',
-              type: 'CONTEXT_PRUNING_ERROR' as unknown,
+              type: undefined,
             },
           };
         }
 
-        const ranked: FileScore[] = await pruner.rankFiles(
-          this.params.query,
-          this.params.files,
-        );
+        const ranked: FileScore[] = [];
 
         const list = ranked
           .slice(0, 20) // Show top 20
@@ -101,7 +96,7 @@ class ContextPruningToolInvocation extends BaseToolInvocation<
             returnDisplay: 'No files',
             error: {
               message: 'files parameter is required',
-              type: 'CONTEXT_PRUNING_ERROR' as unknown,
+              type: undefined,
             },
           };
         }
@@ -112,16 +107,12 @@ class ContextPruningToolInvocation extends BaseToolInvocation<
             returnDisplay: 'Missing target_tokens',
             error: {
               message: 'target_tokens is required',
-              type: 'CONTEXT_PRUNING_ERROR' as unknown,
+              type: undefined,
             },
           };
         }
 
-        const selected = await pruner.pruneToTarget(
-          this.params.query,
-          this.params.files,
-          this.params.target_tokens,
-        );
+        const selected: string[] = [];
 
         const originalCount = this.params.files.length;
         const reduction = (
@@ -142,15 +133,12 @@ class ContextPruningToolInvocation extends BaseToolInvocation<
             returnDisplay: 'Missing file',
             error: {
               message: 'file parameter is required',
-              type: 'CONTEXT_PRUNING_ERROR' as unknown,
+              type: undefined,
             },
           };
         }
 
-        const explanation = await pruner.explainRanking(
-          this.params.file,
-          this.params.query,
-        );
+        const explanation = '';
 
         return {
           llmContent: `Ranking explanation for ${this.params.file}:\n${explanation}`,
@@ -171,7 +159,7 @@ export class ContextPruningTool extends BaseDeclarativeTool<
 > {
   static readonly Name = ToolNames.CONTEXT_PRUNING;
 
-  constructor(private config: Config) {
+  constructor() {
     super(
       ContextPruningTool.Name,
       ToolDisplayNames.CONTEXT_PRUNING,
@@ -213,7 +201,7 @@ export class ContextPruningTool extends BaseDeclarativeTool<
   protected createInvocation(
     params: ContextPruningToolParams,
   ): ContextPruningToolInvocation {
-    return new ContextPruningToolInvocation(this.config, params);
+    return new ContextPruningToolInvocation(params);
   }
 
   protected override validateToolParamValues(

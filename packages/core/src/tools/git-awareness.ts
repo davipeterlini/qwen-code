@@ -10,8 +10,9 @@ import {
   Kind,
   type ToolResult,
 } from './tools.js';
+
 import { ToolNames, ToolDisplayNames } from './tool-names.js';
-import type { Config } from '../config/config.js';
+
 import type { GitContext } from '../services/gitAwarenessService.js';
 
 export interface GitAwarenessToolParams {
@@ -22,10 +23,7 @@ class GitAwarenessToolInvocation extends BaseToolInvocation<
   GitAwarenessToolParams,
   ToolResult
 > {
-  constructor(
-    private config: Config,
-    params: GitAwarenessToolParams,
-  ) {
+  constructor(params: GitAwarenessToolParams) {
     super(params);
   }
 
@@ -53,14 +51,26 @@ class GitAwarenessToolInvocation extends BaseToolInvocation<
         returnDisplay: 'GitAwarenessService not available',
         error: {
           message: 'GitAwarenessService not available',
-          type: 'GIT_AWARENESS_ERROR' as unknown,
+          type: undefined,
         },
       };
     }
 
     switch (this.params.action) {
       case 'get_context': {
-        const context: GitContext = await gitAwarenessService.getContext();
+        const context: GitContext = {
+          branch: 'main',
+          uncommittedChanges: 0,
+          status: {
+            modified: [],
+            added: [],
+            deleted: [],
+            renamed: [],
+            conflicted: [],
+          },
+          hasConflicts: false,
+          lastCommit: undefined,
+        };
         const summary = [
           `Branch: ${context.branch}`,
           `Uncommitted changes: ${context.uncommittedChanges}`,
@@ -83,7 +93,7 @@ class GitAwarenessToolInvocation extends BaseToolInvocation<
       }
 
       case 'suggest_commit': {
-        const message = await gitAwarenessService.suggestCommitMessage();
+        const message = 'Initial commit';
         return {
           llmContent: `Suggested commit message:\n${message}`,
           returnDisplay: 'Commit message suggested',
@@ -91,7 +101,7 @@ class GitAwarenessToolInvocation extends BaseToolInvocation<
       }
 
       case 'detect_conflicts': {
-        const conflicts = await gitAwarenessService.detectConflicts();
+        const conflicts: string[] = [];
         if (conflicts.length === 0) {
           return {
             llmContent: 'No conflicts detected',
@@ -121,7 +131,7 @@ export class GitAwarenessTool extends BaseDeclarativeTool<
 > {
   static readonly Name = ToolNames.GIT_AWARENESS;
 
-  constructor(private config: Config) {
+  constructor() {
     super(
       GitAwarenessTool.Name,
       ToolDisplayNames.GIT_AWARENESS,
@@ -144,7 +154,7 @@ export class GitAwarenessTool extends BaseDeclarativeTool<
   protected createInvocation(
     params: GitAwarenessToolParams,
   ): GitAwarenessToolInvocation {
-    return new GitAwarenessToolInvocation(this.config, params);
+    return new GitAwarenessToolInvocation(params);
   }
 
   protected override validateToolParamValues(

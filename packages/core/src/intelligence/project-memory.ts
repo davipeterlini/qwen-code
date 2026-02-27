@@ -58,7 +58,7 @@ export interface PerformanceMetrics {
 }
 
 /**
- * User interaction session
+ * User interaction _session
  */
 export interface UserSession {
   id: string;
@@ -150,25 +150,27 @@ export class MemoryManager {
 
       // Convert date strings back to Date objects
       data.metadata.lastUpdated = new Date(data.metadata.lastUpdated);
-      data.decisions = data.decisions.map((d: unknown) => ({
+      data.decisions = data.decisions.map((d: Record<string, unknown>) => ({
         ...d,
-        date: new Date(d.date),
+        date: new Date(d['date'] as string),
       }));
-      data.knownIssues = data.knownIssues.map((i: unknown) => ({
+      data.knownIssues = data.knownIssues.map((i: Record<string, unknown>) => ({
         ...i,
-        firstSeen: new Date(i.firstSeen),
-        lastSeen: new Date(i.lastSeen),
+        firstSeen: new Date(i['firstSeen'] as string),
+        lastSeen: new Date(i['lastSeen'] as string),
       }));
       data.performanceBaselines = data.performanceBaselines.map(
-        (p: unknown) => ({
+        (p: Record<string, unknown>) => ({
           ...p,
-          timestamp: new Date(p.timestamp),
+          timestamp: new Date(p['timestamp'] as string),
         }),
       );
-      data.userSessions = data.userSessions.map((s: unknown) => ({
-        ...s,
-        timestamp: new Date(s.timestamp),
-      }));
+      data.userSessions = data.userSessions.map(
+        (s: Record<string, unknown>) => ({
+          ...s,
+          timestamp: new Date(s['timestamp'] as string),
+        }),
+      );
 
       this.memory = data;
     } catch (_error) {
@@ -201,7 +203,7 @@ export class MemoryManager {
    * Learn from user interaction
    */
   async learnFromInteraction(interaction: UserSession): Promise<void> {
-    // Add session to history
+    // Add _session to history
     this.memory.userSessions.push(interaction);
     this.memory.metadata.totalSessions++;
 
@@ -229,7 +231,7 @@ export class MemoryManager {
    */
   private async learnConventions(_session: UserSession): Promise<void> {
     // Analyze modified files to learn conventions
-    for (const file of session.filesModified) {
+    for (const file of _session.filesModified) {
       try {
         const content = await fs.readFile(file, 'utf-8');
 
@@ -313,7 +315,7 @@ export class MemoryManager {
    */
   private async detectCommandPatterns(_session: UserSession): Promise<void> {
     // Analyze command sequences
-    const commands = session.commandsExecuted;
+    const commands = _session.commandsExecuted;
 
     // Detect common sequences
     if (commands.length >= 2) {
