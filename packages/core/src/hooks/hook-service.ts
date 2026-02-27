@@ -30,13 +30,21 @@ export class HookService {
   private configLoaded = false;
   private configPaths: string[] = [];
 
-  constructor(private readonly appConfig: Config) {}
+  constructor(private readonly appConfig?: Config) {}
 
   /**
    * Initialize hook service - load configuration
    */
   async initialize(): Promise<void> {
     debugLogger.debug('Initializing hook service');
+
+    if (!this.appConfig) {
+      debugLogger.debug(
+        'No config provided, skipping hook service initialization',
+      );
+      this.configLoaded = true;
+      return;
+    }
 
     // Load hooks from multiple locations (project takes precedence)
     this.configPaths = [

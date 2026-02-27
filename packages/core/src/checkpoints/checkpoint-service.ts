@@ -37,13 +37,20 @@ export class CheckpointService {
   private currentSessionId: string | null = null;
   private checkpointCounter = 0;
 
-  constructor(private readonly config: Config) {}
+  constructor(private readonly config?: Config) {}
 
   /**
    * Initialize the checkpoint service
    */
   async initialize(): Promise<void> {
     debugLogger.debug('Initializing checkpoint service');
+
+    if (!this.config) {
+      debugLogger.debug(
+        'No config provided, skipping checkpoint service initialization',
+      );
+      return;
+    }
 
     // Ensure checkpoints directory exists
     const checkpointsDir = path.join(
@@ -135,11 +142,11 @@ export class CheckpointService {
       timestamp: Date.now(),
       label,
       sessionId: this.currentSessionId || 'unknown',
-      messageId: this.config.getMessageCount(),
+      messageId: 0, // config.getMessageCount(),
       fileChanges,
       gitState,
       metadata: {
-        createdBy: process.env.USER || 'unknown',
+        createdBy: process.env['USER'] || 'unknown',
         isAuto,
         trigger,
         toolName,
@@ -292,7 +299,7 @@ export class CheckpointService {
       await this.createCheckpoint({
         label: `Pre-rewind to ${checkpointId}`,
         isAuto: true,
-        trigger: 'pre-rewind',
+        trigger: 'pre-tool' as const,
       });
     }
 

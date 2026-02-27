@@ -6,9 +6,6 @@
 
 /**
  * Integration entry point for all new features
- *
- * Import and call initializeNewFeatures() during application startup
- * to enable all new capabilities.
  */
 
 import type { Config } from '../config/config.js';
@@ -25,45 +22,27 @@ export async function initializeNewFeatures(config: Config): Promise<void> {
 
   try {
     // 1. Initialize scheduler extensions (hooks + checkpoints)
-    await initializeSchedulerExtensions(config);
+    const hookService = config.getHookService();
+    const checkpointService = config.getCheckpointService();
 
-    // 2. Skills auto-activation is already integrated via SkillActivationService
+    if (hookService) {
+      await hookService.initialize();
+      debugLogger.debug('✓ Hook service initialized');
+    }
+
+    if (checkpointService) {
+      await checkpointService.initialize();
+      debugLogger.debug('✓ Checkpoint service initialized');
+    }
+
+    // 2-4. Other features are already integrated
     debugLogger.debug('Skills auto-activation ready');
-
-    // 3. Markdown commands are loaded via CommandService
     debugLogger.debug('Markdown commands ready');
-
-    // 4. Rewind command is registered in BuiltinCommandLoader
     debugLogger.debug('Rewind command ready');
-
     debugLogger.debug('All new features initialized successfully!');
   } catch (error) {
     debugLogger.error('Error initializing new features:', error);
     throw error;
-  }
-}
-
-/**
- * Initialize scheduler extensions (hooks + checkpoints)
- */
-export async function initializeSchedulerExtensions(
-  config: Config,
-): Promise<void> {
-  const hookService = config.getHookService();
-  const checkpointService = config.getCheckpointService();
-
-  if (hookService) {
-    await hookService.initialize();
-    debugLogger.debug('✓ Hook service initialized');
-  } else {
-    debugLogger.warn('Hook service not available');
-  }
-
-  if (checkpointService) {
-    await checkpointService.initialize();
-    debugLogger.debug('✓ Checkpoint service initialized');
-  } else {
-    debugLogger.warn('Checkpoint service not available');
   }
 }
 
@@ -83,10 +62,3 @@ export function getNewFeaturesStatus(config: Config): {
     markdownCommands: !!config.getMarkdownCommandLoader(),
   };
 }
-
-// Export for external use
-export {
-  initializeNewFeatures,
-  initializeSchedulerExtensions,
-  getNewFeaturesStatus,
-};
