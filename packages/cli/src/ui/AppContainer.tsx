@@ -67,6 +67,7 @@ import { clearScreen } from '../utils/stdioHelpers.js';
 import { useTextBuffer } from './components/shared/text-buffer.js';
 import { useLogger } from './hooks/useLogger.js';
 import { useGeminiStream } from './hooks/useGeminiStream.js';
+import { useSkillAutoActivation } from './hooks/useSkillAutoActivation.js';
 import { useVim } from './hooks/vim.js';
 import { type LoadedSettings, SettingScope } from '../config/settings.js';
 import { type InitializationResult } from '../core/initializer.js';
@@ -694,6 +695,13 @@ export const AppContainer = (props: AppContainerProps) => {
     handleVisionSwitchRequired, // onVisionSwitchRequired
   );
 
+  // Initialize skill auto-activation hook
+  const {
+    checkAndActivateSkills,
+    // resetActivatedSkills, // Reserved for future use
+    // activatedSkills, // Reserved for future use
+  } = useSkillAutoActivation(config);
+
   // Track whether suggestions are visible for Tab key handling
   const [hasSuggestionsVisible, setHasSuggestionsVisible] = useState(false);
 
@@ -714,10 +722,26 @@ export const AppContainer = (props: AppContainerProps) => {
 
   // Callback for handling final submit (must be after addMessage from useMessageQueue)
   const handleFinalSubmit = useCallback(
-    (submittedValue: string) => {
-      addMessage(submittedValue);
+    async (submittedValue: string) => {
+      // Check for skill auto-activation
+      const { enhancedPrompt, message } =
+        await checkAndActivateSkills(submittedValue);
+
+      // Show activation message if skills were activated
+      if (message) {
+        historyManager.addItem(
+          {
+            type: MessageType.INFO,
+            text: message,
+          },
+          Date.now(),
+        );
+      }
+
+      // Add the (possibly enhanced) prompt to the message queue
+      addMessage(enhancedPrompt);
     },
-    [addMessage],
+    [addMessage, checkAndActivateSkills, historyManager],
   );
 
   // Welcome back functionality (must be after handleFinalSubmit)

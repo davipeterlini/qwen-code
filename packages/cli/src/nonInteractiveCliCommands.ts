@@ -15,6 +15,7 @@ import {
 import { CommandService } from './services/CommandService.js';
 import { BuiltinCommandLoader } from './services/BuiltinCommandLoader.js';
 import { FileCommandLoader } from './services/FileCommandLoader.js';
+import { MarkdownCommandLoader } from './services/MarkdownCommandLoader.js';
 import {
   CommandKind,
   type CommandContext,
@@ -252,6 +253,7 @@ export const handleSlashCommand = async (
   // Load all commands to check if the command exists but is not allowed
   const allLoaders = [
     new BuiltinCommandLoader(config),
+    new MarkdownCommandLoader(config),
     new FileCommandLoader(config),
   ];
 

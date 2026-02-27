@@ -1,0 +1,53 @@
+{
+  "$schema": "https://qwen-code.dev/schemas/hooks.json",
+  "PostToolUse": [
+    {
+      "matcher": "Edit|Write|CreateFile",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "npm run lint",
+          "blocking": false,
+          "timeout": 30000
+        }
+      ]
+    },
+    {
+      "matcher": ".*",
+      "hooks": [
+        {
+          "type": "prompt",
+          "prompt": "Review this tool execution for potential issues or improvements.",
+          "blocking": false,
+          "timeout": 60000
+        }
+      ]
+    }
+  ],
+  "UserPromptSubmit": [
+    {
+      "matcher": "^/commit",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "git status",
+          "blocking": true,
+          "timeout": 10000
+        }
+      ]
+    }
+  ],
+  "SessionStart": [
+    {
+      "matcher": ".*",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "echo 'Session started at $(date)'",
+          "blocking": false,
+          "timeout": 5000
+        }
+      ]
+    }
+  ]
+}

@@ -68,8 +68,12 @@ import { ideContextStore } from '../ide/ideContext.js';
 import { InputFormat, OutputFormat } from '../output/types.js';
 import { PromptRegistry } from '../prompts/prompt-registry.js';
 import { SkillManager } from '../skills/skill-manager.js';
+import { SkillActivationService } from '../skills/skill-activation-service.js';
 import { SubagentManager } from '../subagents/subagent-manager.js';
 import type { SubagentConfig } from '../subagents/types.js';
+import { HookService } from '../hooks/hook-service.js';
+import { CheckpointService } from '../checkpoints/checkpoint-service.js';
+import { MarkdownCommandLoader } from '../commands/markdown-command-loader.js';
 import {
   DEFAULT_OTLP_ENDPOINT,
   DEFAULT_TELEMETRY_TARGET,
@@ -419,6 +423,10 @@ export class Config {
   private subagentManager!: SubagentManager;
   private extensionManager!: ExtensionManager;
   private skillManager: SkillManager | null = null;
+  private skillActivationService: SkillActivationService | null = null;
+  private hookService: HookService | null = null;
+  private checkpointService: CheckpointService | null = null;
+  private markdownCommandLoader: MarkdownCommandLoader | null = null;
   private fileSystemService: FileSystemService;
   private contentGeneratorConfig!: ContentGeneratorConfig;
   private contentGeneratorConfigSources: ContentGeneratorConfigSources = {};
@@ -697,8 +705,22 @@ export class Config {
 
     this.subagentManager = new SubagentManager(this);
     this.skillManager = new SkillManager(this);
+    this.skillActivationService = new SkillActivationService(this);
+    this.hookService = new HookService(this);
+    this.checkpointService = new CheckpointService(this);
+    this.markdownCommandLoader = new MarkdownCommandLoader();
     await this.skillManager.startWatching();
+    await this.hookService.initialize();
+    await this.checkpointService.initialize();
+    await this.markdownCommandLoader.loadCommands(
+      this.getWorkingDir(),
+      this.storage.getUserHomeDir(),
+    );
     this.debugLogger.debug('Skill manager initialized');
+    this.debugLogger.debug('Skill activation service initialized');
+    this.debugLogger.debug('Hook service initialized');
+    this.debugLogger.debug('Checkpoint service initialized');
+    this.debugLogger.debug('Markdown command loader initialized');
 
     // Load session subagents if they were provided before initialization
     if (this.sessionSubagents.length > 0) {
@@ -1087,6 +1109,9 @@ export class Config {
       if (this.toolRegistry) {
         await this.toolRegistry.stop();
       }
+
+      // Cleanup new services
+      this.debugLogger.debug('Shutting down new services...');
     } catch (error) {
       // Log but don't throw - cleanup should be best-effort
       this.debugLogger.error('Error during Config shutdown:', error);
@@ -1634,6 +1659,22 @@ export class Config {
 
   getSkillManager(): SkillManager | null {
     return this.skillManager;
+  }
+
+  getSkillActivationService(): SkillActivationService | null {
+    return this.skillActivationService;
+  }
+
+  getHookService(): HookService | null {
+    return this.hookService;
+  }
+
+  getCheckpointService(): CheckpointService | null {
+    return this.checkpointService;
+  }
+
+  getMarkdownCommandLoader(): MarkdownCommandLoader | null {
+    return this.markdownCommandLoader;
   }
 
   async createToolRegistry(

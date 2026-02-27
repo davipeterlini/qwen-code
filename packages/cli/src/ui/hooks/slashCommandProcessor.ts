@@ -33,6 +33,7 @@ import { CommandService } from '../../services/CommandService.js';
 import { BuiltinCommandLoader } from '../../services/BuiltinCommandLoader.js';
 import { FileCommandLoader } from '../../services/FileCommandLoader.js';
 import { McpPromptLoader } from '../../services/McpPromptLoader.js';
+import { MarkdownCommandLoader } from '../../services/MarkdownCommandLoader.js';
 import { parseSlashCommand } from '../../utils/commands.js';
 import { clearScreen } from '../../utils/stdioHelpers.js';
 import {
@@ -274,6 +275,7 @@ export const useSlashCommandProcessor = (
       const loaders = [
         new McpPromptLoader(config),
         new BuiltinCommandLoader(config),
+        new MarkdownCommandLoader(config),
         new FileCommandLoader(config),
       ];
       const commandService = await CommandService.create(

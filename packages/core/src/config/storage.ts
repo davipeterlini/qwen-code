@@ -101,6 +101,10 @@ export class Storage {
     return path.join(Storage.getGlobalQwenDir(), OAUTH_FILE);
   }
 
+  getUserHomeDir(): string {
+    return os.homedir();
+  }
+
   getProjectRoot(): string {
     return this.targetDir;
   }

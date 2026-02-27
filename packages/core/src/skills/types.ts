@@ -13,6 +13,23 @@
 export type SkillLevel = 'project' | 'user' | 'extension';
 
 /**
+ * Trigger configuration for auto-activation of skills
+ */
+export interface SkillTrigger {
+  /** Keywords that trigger this skill (case-insensitive matching) */
+  keywords: string[];
+
+  /** Optional regex patterns for more complex matching */
+  patterns?: string[];
+
+  /** Minimum confidence threshold (0-1, default: 0.5) */
+  threshold?: number;
+
+  /** Whether to activate automatically or just suggest */
+  autoActivate?: boolean;
+}
+
+/**
  * Core configuration for a skill as stored in SKILL.md files.
  * Each skill directory contains a SKILL.md file with YAML frontmatter
  * containing metadata, followed by markdown content describing the skill.
@@ -31,7 +48,7 @@ export interface SkillConfig {
   allowedTools?: string[];
 
   /**
-   * Storage level - determines where the configuration file is stored
+   * Storage level - determines where the configuration is stored
    */
   level: SkillLevel;
 
@@ -49,6 +66,22 @@ export interface SkillConfig {
    * For extension-level skills: the name of the providing extension
    */
   extensionName?: string;
+
+  /**
+   * Optional trigger configuration for auto-activation
+   * If present, the skill can be automatically activated when context matches
+   */
+  triggers?: SkillTrigger[];
+
+  /**
+   * Categories for better organization and discovery
+   */
+  categories?: string[];
+
+  /**
+   * Version of the skill configuration
+   */
+  version?: string;
 }
 
 /**

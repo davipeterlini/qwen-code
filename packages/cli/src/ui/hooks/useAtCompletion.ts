@@ -9,6 +9,7 @@ import type { Config, FileSearch } from '@qwen-code/qwen-code-core';
 import { FileSearchFactory, escapePath } from '@qwen-code/qwen-code-core';
 import type { Suggestion } from '../components/SuggestionsDisplay.js';
 import { MAX_SUGGESTIONS_TO_SHOW } from '../components/SuggestionsDisplay.js';
+import * as path from 'node:path';
 
 export enum AtCompletionStatus {
   IDLE = 'idle',
@@ -95,6 +96,71 @@ export interface UseAtCompletionProps {
   cwd: string;
   setSuggestions: (suggestions: Suggestion[]) => void;
   setIsLoadingSuggestions: (isLoading: boolean) => void;
+}
+
+/**
+ * Calculates a relevance score for a file path based on the search pattern.
+ * Lower score = more relevant.
+ */
+function calculateRelevanceScore(filePath: string, pattern: string): number {
+  let score = 0;
+  const fileName = path.basename(filePath);
+  const patternLower = pattern.toLowerCase();
+  const fileNameLower = fileName.toLowerCase();
+  const filePathLower = filePath.toLowerCase();
+
+  // Exact match on filename gets highest priority
+  if (fileNameLower === patternLower) {
+    score -= 1000;
+  }
+
+  // Starts with pattern in filename is very relevant
+  if (fileNameLower.startsWith(patternLower)) {
+    score -= 500;
+  }
+
+  // Contains pattern in filename
+  if (fileNameLower.includes(patternLower)) {
+    score -= 200;
+  }
+
+  // Fuzzy match in filename
+  if (filePathLower.includes(patternLower)) {
+    score -= 100;
+  }
+
+  // Prefer files in root directory
+  const depth = filePath.split(path.sep).length;
+  score += depth * 10;
+
+  // Prefer shorter paths (more likely to be what user wants)
+  score += filePath.length * 0.5;
+
+  // Bonus for common file extensions
+  const ext = path.extname(filePath);
+  if (
+    ['.ts', '.tsx', '.js', '.jsx', '.json', '.md', '.yaml', '.yml'].includes(
+      ext,
+    )
+  ) {
+    score -= 50;
+  }
+
+  return score;
+}
+
+/**
+ * Sorts suggestions by relevance score.
+ */
+function sortSuggestions(
+  suggestions: Suggestion[],
+  pattern: string,
+): Suggestion[] {
+  return suggestions.sort((a, b) => {
+    const scoreA = calculateRelevanceScore(a.label, pattern);
+    const scoreB = calculateRelevanceScore(b.label, pattern);
+    return scoreA - scoreB;
+  });
 }
 
 export function useAtCompletion(props: UseAtCompletionProps): void {
@@ -211,11 +277,22 @@ export function useAtCompletion(props: UseAtCompletionProps): void {
           return;
         }
 
-        const suggestions = results.map((p) => ({
-          label: p,
-          value: escapePath(p),
-        }));
-        dispatch({ type: 'SEARCH_SUCCESS', payload: suggestions });
+        // Enhanced suggestions with relevance scoring
+        const suggestions = results
+          .map((p) => {
+            const relativePath = path.relative(cwd, path.join(cwd, p));
+            return {
+              label: relativePath,
+              value: escapePath(relativePath),
+              description: path.basename(p), // Show filename as description
+            };
+          })
+          .slice(0, MAX_SUGGESTIONS_TO_SHOW);
+
+        // Sort by relevance for better UX
+        const sortedSuggestions = sortSuggestions(suggestions, state.pattern);
+
+        dispatch({ type: 'SEARCH_SUCCESS', payload: sortedSuggestions });
       } catch (error) {
         if (!(error instanceof Error && error.name === 'AbortError')) {
           dispatch({ type: 'ERROR' });

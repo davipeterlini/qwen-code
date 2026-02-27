@@ -309,3 +309,51 @@ export * from './qwen/qwenOAuth2.js';
 
 export { makeFakeConfig } from './test-utils/config.js';
 export * from './test-utils/index.js';
+
+// ============================================================================
+// New Features (Hooks, Checkpoints, Skills, Commands)
+// ============================================================================
+
+export { HookService } from './hooks/hook-service.js';
+export type {
+  HooksConfig,
+  HookConfig,
+  HookMatcher,
+  HookType,
+  HookExecutionType,
+  HookExecutionContext,
+  HookExecutionResult,
+} from './hooks/types.js';
+
+export { CheckpointService } from './checkpoints/checkpoint-service.js';
+export type {
+  Checkpoint,
+  FileChange,
+  GitState,
+  CheckpointCreateOptions,
+  RewindOptions,
+  RewindResult,
+  CheckpointListItem,
+} from './checkpoints/checkpoint-types.js';
+
+export { SkillActivationService } from './skills/skill-activation-service.js';
+export type { SkillMatchResult } from './skills/skill-activation-service.js';
+export type { SkillTrigger } from './skills/types.js';
+
+export { MarkdownCommandLoader } from './commands/markdown-command-loader.js';
+export type {
+  MarkdownCommandConfig,
+  ParsedCommand,
+} from './commands/markdown-command-types.js';
+
+export {
+  initializeNewFeatures,
+  getNewFeaturesStatus,
+} from './integration/new-features-integration.js';
+
+export {
+  executeToolHooks,
+  createPreToolCheckpoint,
+  shouldBlockToolExecution,
+  getModifiedPromptFromHooks,
+} from './core/tool-scheduler-extensions.js';

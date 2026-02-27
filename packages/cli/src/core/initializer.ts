@@ -10,6 +10,7 @@ import {
   IdeConnectionType,
   logIdeConnection,
   type Config,
+  initializeNewFeatures,
 } from '@qwen-code/qwen-code-core';
 import { type LoadedSettings, SettingScope } from '../config/settings.js';
 import { performInitialAuth } from './auth.js';
@@ -64,6 +65,9 @@ export async function initializeApp(
     await ideClient.connect();
     logIdeConnection(config, new IdeConnectionEvent(IdeConnectionType.START));
   }
+
+  // Initialize new features (hooks, checkpoints, skills auto-activation, markdown commands)
+  await initializeNewFeatures(config);
 
   return {
     authError,

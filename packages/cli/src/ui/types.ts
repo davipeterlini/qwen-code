@@ -256,6 +256,15 @@ export type HistoryItemMcpStatus = HistoryItemBase & {
   showTips: boolean;
 };
 
+export type HistoryItemConfirmation = HistoryItemBase & {
+  type: 'confirmation';
+  text: string;
+  confirmations: Array<{
+    label: string;
+    value: string;
+  }>;
+};
+
 // Using Omit<HistoryItem, 'id'> seems to have some issues with typescript's
 // type inference e.g. historyItem.type === 'tool_group' isn't auto-inferring that
 // 'tools' in historyItem.
@@ -284,7 +293,8 @@ export type HistoryItemWithoutId =
   | HistoryItemExtensionsList
   | HistoryItemToolsList
   | HistoryItemSkillsList
-  | HistoryItemMcpStatus;
+  | HistoryItemMcpStatus
+  | HistoryItemConfirmation;
 
 export type HistoryItem = HistoryItemWithoutId & { id: number };
 
@@ -307,6 +317,8 @@ export enum MessageType {
   TOOLS_LIST = 'tools_list',
   SKILLS_LIST = 'skills_list',
   MCP_STATUS = 'mcp_status',
+  CONFIRMATION = 'confirmation',
+  SUCCESS = 'success',
 }
 
 // Simplified message structure for internal feedback
