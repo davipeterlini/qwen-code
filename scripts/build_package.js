@@ -18,12 +18,20 @@
 // limitations under the License.
 
 import { execSync } from 'node:child_process';
-import { writeFileSync } from 'node:fs';
+import { writeFileSync, existsSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 
 if (!process.cwd().includes('packages')) {
   console.error('must be invoked from a package directory');
   process.exit(1);
+}
+
+const distPath = join(process.cwd(), 'dist');
+
+// clean dist directory before building
+if (existsSync(distPath)) {
+  console.log(`Cleaning ${distPath}...`);
+  rmSync(distPath, { recursive: true, force: true });
 }
 
 // build typescript files
