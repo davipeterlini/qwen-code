@@ -1,0 +1,40 @@
+{
+  "hooks": {
+    "onSessionStart": {
+      "enabled": true,
+      "script": "echo 'Qwen Code session started at $(date)' >> ~/.qwen/session.log",
+      "timeout": 5000,
+      "continueOnError": true
+    },
+    "onPromptSubmit": {
+      "enabled": false,
+      "script": "echo \"[$(date)] Prompt: $QWEN_PROMPT\" >> ~/.qwen/prompts.log",
+      "timeout": 5000,
+      "continueOnError": true
+    },
+    "onResponse": {
+      "enabled": false,
+      "script": "echo \"[$(date)] Response received\" >> ~/.qwen/responses.log",
+      "timeout": 5000,
+      "continueOnError": true
+    },
+    "onToolCall": {
+      "enabled": false,
+      "script": "echo \"[$(date)] Tool called: $QWEN_TOOL_NAME\" >> ~/.qwen/tools.log",
+      "timeout": 5000,
+      "continueOnError": true
+    },
+    "onFileEdit": {
+      "enabled": false,
+      "script": "git diff --no-index /dev/null \"$QWEN_FILE_PATH\" 2>/dev/null | head -20 >> ~/.qwen/edits.log || true",
+      "timeout": 10000,
+      "continueOnError": true
+    },
+    "onSessionEnd": {
+      "enabled": true,
+      "script": "echo \"[$(date)] Session ended - Duration: $QWEN_SESSION_DURATION ms\" >> ~/.qwen/session.log",
+      "timeout": 5000,
+      "continueOnError": true
+    }
+  }
+}

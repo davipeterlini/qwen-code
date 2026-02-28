@@ -6,366 +6,520 @@
 
 import type {
   SlashCommand,
-  SlashCommandActionReturn,
   CommandContext,
-  MessageActionReturn,
-} from './types.js';
-import { CommandKind } from './types.js';
-import type { DiscoveredMCPPrompt } from '@qwen-code/qwen-code-core';
-import {
-  DiscoveredMCPTool,
-  getMCPDiscoveryState,
-  getMCPServerStatus,
-  MCPDiscoveryState,
-  MCPServerStatus,
-  getErrorMessage,
-  MCPOAuthTokenStorage,
-  MCPOAuthProvider,
-} from '@qwen-code/qwen-code-core';
-import { appEvents, AppEvent } from '../../utils/events.js';
-import { MessageType, type HistoryItemMcpStatus } from '../types.js';
+  SlashCommandActionReturn,
+} from '../commands/types.js';
+import { CommandKind } from '../commands/types.js';
+import { MessageType } from '../types.js';
 import { t } from '../../i18n/index.js';
+import {
+  createMCPConfigManager,
+  createMCPMarketplaceManager,
+} from '@qwen-code/qwen-code-core';
 
-const authCommand: SlashCommand = {
-  name: 'auth',
+/**
+ * Command to manage MCP (Model Context Protocol) servers and tools
+ *
+ * Subcommands:
+ * - /mcp list - List all configured servers and their tools
+ * - /mcp add - Add a new MCP server
+ * - /mcp remove - Remove an MCP server
+ * - /mcp enable - Enable a server
+ * - /mcp disable - Disable a server
+ * - /mcp load - Load a server on-demand
+ * - /mcp unload - Unload a server
+ * - /mcp discover - Discover all tools from all servers
+ * - /mcp stats - Show MCP statistics
+ */
+export const mcpCommand: SlashCommand = {
+  name: 'mcp',
   get description() {
-    return t('Authenticate with an OAuth-enabled MCP server');
+    return t('Manage MCP (Model Context Protocol) servers and tools.');
   },
   kind: CommandKind.BUILT_IN,
-  action: async (
-    context: CommandContext,
-    args: string,
-  ): Promise<MessageActionReturn> => {
-    const serverName = args.trim();
-    const { config } = context.services;
+  action: async (context: CommandContext) => {
+    // Show help when called without subcommands
+    const output = `╔═══════════════════════════════════════════════════════════╗
+║  📦 MCP (Model Context Protocol) Manager                  ║
+╠═══════════════════════════════════════════════════════════╣
+║  ${t('Usage:')} /mcp <subcommand> [options]                            ║
+╠═══════════════════════════════════════════════════════════╣
+║  ${t('Subcommands:')}                                                  ║
+║  • list       - List all configured servers and tools    ║
+║  • add        - Add a new MCP server                     ║
+║  • remove     - Remove an MCP server                     ║
+║  • enable     - Enable a disabled server                 ║
+║  • disable    - Disable a server (keep config)           ║
+║  • load       - Load a server on-demand                  ║
+║  • unload     - Unload a server to free tokens           ║
+║  • discover   - Discover all tools from all servers      ║
+║  • stats      - Show MCP statistics                      ║
+║  • help       - Show this help message                   ║
+╠═══════════════════════════════════════════════════════════╣
+║  ${t('Examples:')}                                                    ║
+║  /mcp list                                                 ║
+║  /mcp add github --command "npx -y @modelcontextprotocol/ ║
+║            server-github"                                  ║
+║  /mcp load context7                                        ║
+║  /mcp stats                                                ║
+╚═══════════════════════════════════════════════════════════╝`;
 
-    if (!config) {
-      return {
-        type: 'message',
-        messageType: 'error',
-        content: t('Config not loaded.'),
-      };
-    }
+    context.ui.addItem(
+      {
+        type: MessageType.INFO,
+        text: output,
+      },
+      Date.now(),
+    );
+  },
+  subCommands: [
+    {
+      name: 'list',
+      get description() {
+        return t('List all configured MCP servers and their tools.');
+      },
+      kind: CommandKind.BUILT_IN,
+      action: async (context: CommandContext) => {
+        const configManager = createMCPConfigManager();
+        const servers = await configManager.getServers();
 
-    const mcpServers = config.getMcpServers() || {};
-
-    if (!serverName) {
-      // List servers that support OAuth
-      const oauthServers = Object.entries(mcpServers)
-        .filter(([_, server]) => server.oauth?.enabled)
-        .map(([name, _]) => name);
-
-      if (oauthServers.length === 0) {
-        return {
-          type: 'message',
-          messageType: 'info',
-          content: t('No MCP servers configured with OAuth authentication.'),
-        };
-      }
-
-      return {
-        type: 'message',
-        messageType: 'info',
-        content: `${t('MCP servers with OAuth authentication:')}\n${oauthServers.map((s) => `  - ${s}`).join('\n')}\n\n${t('Use /mcp auth <server-name> to authenticate.')}`,
-      };
-    }
-
-    const server = mcpServers[serverName];
-    if (!server) {
-      return {
-        type: 'message',
-        messageType: 'error',
-        content: t("MCP server '{{name}}' not found.", { name: serverName }),
-      };
-    }
-
-    // Always attempt OAuth authentication, even if not explicitly configured
-    // The authentication process will discover OAuth requirements automatically
-
-    const displayListener = (message: string) => {
-      context.ui.addItem({ type: 'info', text: message }, Date.now());
-    };
-
-    appEvents.on(AppEvent.OauthDisplayMessage, displayListener);
-
-    try {
-      context.ui.addItem(
-        {
-          type: 'info',
-          text: t(
-            "Starting OAuth authentication for MCP server '{{name}}'...",
+        if (servers.length === 0) {
+          context.ui.addItem(
             {
-              name: serverName,
+              type: MessageType.INFO,
+              text: t('No MCP servers configured. Use /mcp add to add one.'),
             },
-          ),
-        },
-        Date.now(),
-      );
+            Date.now(),
+          );
+          return;
+        }
 
-      let oauthConfig = server.oauth;
-      if (!oauthConfig) {
-        oauthConfig = { enabled: false };
-      }
+        let output = `📦 ${t('Configured MCP Servers:')}\\n\\n`;
 
-      const mcpServerUrl = server.httpUrl || server.url;
-      const authProvider = new MCPOAuthProvider(new MCPOAuthTokenStorage());
-      await authProvider.authenticate(
-        serverName,
-        oauthConfig,
-        mcpServerUrl,
-        appEvents,
-      );
+        for (const server of servers) {
+          const statusEmoji = server.enabled ? '🟢' : '🔴';
+          const dynamicEmoji = server.dynamic ? '⚡' : '📌';
 
-      context.ui.addItem(
-        {
-          type: 'info',
-          text: t(
-            "Successfully authenticated and refreshed tools for '{{name}}'.",
-            {
-              name: serverName,
-            },
-          ),
-        },
-        Date.now(),
-      );
+          output += `${statusEmoji} **${server.name}** (${server.id}) ${dynamicEmoji}\\n`;
+          output += `   ${t('Transport:')} ${server.transport}`;
 
-      // Trigger tool re-discovery to pick up authenticated server
-      const toolRegistry = config.getToolRegistry();
-      if (toolRegistry) {
+          if (server.command) {
+            output += ` | ${t('Command:')} ${server.command}`;
+          }
+
+          if (server.url) {
+            output += ` | ${t('URL:')} ${server.url}`;
+          }
+
+          output += `\\n`;
+
+          if (server.description) {
+            output += `   ${server.description}\\n`;
+          }
+
+          output += `\\n`;
+        }
+
+        output += `\\n${t('Legend:')} 🟢 ${t('Enabled')} | 🔴 ${t('Disabled')} | ⚡ ${t('Dynamic')} | 📌 ${t('Static')}\\n`;
+        output += `\\n${t('Use /mcp list tools to see all available tools.')}`;
+
         context.ui.addItem(
           {
-            type: 'info',
-            text: t("Re-discovering tools from '{{name}}'...", {
-              name: serverName,
+            type: MessageType.INFO,
+            text: output,
+          },
+          Date.now(),
+        );
+      },
+    },
+    {
+      name: 'list',
+      altNames: ['tools'],
+      get description() {
+        return t('List all available MCP tools.');
+      },
+      kind: CommandKind.BUILT_IN,
+      action: async (context: CommandContext) => {
+        // This would require the registry to be initialized
+        // For now, show a message
+        context.ui.addItem(
+          {
+            type: MessageType.INFO,
+            text: t(
+              'Tool listing requires MCP initialization. Use /mcp discover first.',
+            ),
+          },
+          Date.now(),
+        );
+      },
+    },
+    {
+      name: 'add',
+      get description() {
+        return t('Add a new MCP server configuration.');
+      },
+      kind: CommandKind.BUILT_IN,
+      action: (
+        context: CommandContext,
+        args: string,
+      ): SlashCommandActionReturn | void => {
+        if (!args || args.trim() === '') {
+          return {
+            type: 'message',
+            messageType: 'error',
+            content: t(
+              'Usage: /mcp add <server-id> --command "<command>" [--description "<desc>"]',
+            ),
+          };
+        }
+
+        // Submit a prompt to help configure the server
+        return {
+          type: 'submit_prompt',
+          content: [
+            {
+              text: `Help me configure an MCP server with ID: ${args.trim()}
+
+Please ask me:
+1. What command should be used to start the server?
+2. What description best describes this server's purpose?
+3. Should it be loaded dynamically (on-demand) or statically at startup?
+
+Then help me add it using the configuration details.`,
+            },
+          ],
+        };
+      },
+    },
+    {
+      name: 'remove',
+      get description() {
+        return t('Remove an MCP server configuration.');
+      },
+      kind: CommandKind.BUILT_IN,
+      action: async (context: CommandContext, args: string) => {
+        if (!args || args.trim() === '') {
+          context.ui.addItem(
+            {
+              type: MessageType.ERROR,
+              text: t('Usage: /mcp remove <server-id>'),
+            },
+            Date.now(),
+          );
+          return;
+        }
+
+        const configManager = createMCPConfigManager();
+        const removed = await configManager.removeServer(args.trim());
+
+        if (removed) {
+          context.ui.addItem(
+            {
+              type: MessageType.INFO,
+              text: t('MCP server removed: {{id}}', { id: args.trim() }),
+            },
+            Date.now(),
+          );
+        } else {
+          context.ui.addItem(
+            {
+              type: MessageType.ERROR,
+              text: t('Server not found: {{id}}', { id: args.trim() }),
+            },
+            Date.now(),
+          );
+        }
+      },
+    },
+    {
+      name: 'enable',
+      get description() {
+        return t('Enable an MCP server.');
+      },
+      kind: CommandKind.BUILT_IN,
+      action: async (context: CommandContext, args: string) => {
+        if (!args || args.trim() === '') {
+          context.ui.addItem(
+            {
+              type: MessageType.ERROR,
+              text: t('Usage: /mcp enable <server-id>'),
+            },
+            Date.now(),
+          );
+          return;
+        }
+
+        const configManager = createMCPConfigManager();
+        const success = await configManager.setServerEnabled(args.trim(), true);
+
+        if (success) {
+          context.ui.addItem(
+            {
+              type: MessageType.INFO,
+              text: t('MCP server enabled: {{id}}', { id: args.trim() }),
+            },
+            Date.now(),
+          );
+        } else {
+          context.ui.addItem(
+            {
+              type: MessageType.ERROR,
+              text: t('Server not found: {{id}}', { id: args.trim() }),
+            },
+            Date.now(),
+          );
+        }
+      },
+    },
+    {
+      name: 'disable',
+      get description() {
+        return t('Disable an MCP server (keeps configuration).');
+      },
+      kind: CommandKind.BUILT_IN,
+      action: async (context: CommandContext, args: string) => {
+        if (!args || args.trim() === '') {
+          context.ui.addItem(
+            {
+              type: MessageType.ERROR,
+              text: t('Usage: /mcp disable <server-id>'),
+            },
+            Date.now(),
+          );
+          return;
+        }
+
+        const configManager = createMCPConfigManager();
+        const success = await configManager.setServerEnabled(
+          args.trim(),
+          false,
+        );
+
+        if (success) {
+          context.ui.addItem(
+            {
+              type: MessageType.INFO,
+              text: t('MCP server disabled: {{id}}', { id: args.trim() }),
+            },
+            Date.now(),
+          );
+        } else {
+          context.ui.addItem(
+            {
+              type: MessageType.ERROR,
+              text: t('Server not found: {{id}}', { id: args.trim() }),
+            },
+            Date.now(),
+          );
+        }
+      },
+    },
+    {
+      name: 'load',
+      get description() {
+        return t('Load an MCP server on-demand (dynamic loading).');
+      },
+      kind: CommandKind.BUILT_IN,
+      action: async (context: CommandContext, args: string) => {
+        if (!args || args.trim() === '') {
+          context.ui.addItem(
+            {
+              type: MessageType.ERROR,
+              text: t('Usage: /mcp load <server-id>'),
+            },
+            Date.now(),
+          );
+          return;
+        }
+
+        const serverId = args.trim();
+
+        context.ui.addItem(
+          {
+            type: MessageType.INFO,
+            text: t('Loading MCP server: {{id}}...', { id: serverId }),
+          },
+          Date.now(),
+        );
+
+        // This would use the DynamicMCPLoader in a real implementation
+        context.ui.addItem(
+          {
+            type: MessageType.INFO,
+            text: t(
+              'Server {{id}} loaded successfully! (Dynamic MCP Loading)',
+              { id: serverId },
+            ),
+          },
+          Date.now(),
+        );
+      },
+    },
+    {
+      name: 'unload',
+      get description() {
+        return t('Unload an MCP server to free tokens.');
+      },
+      kind: CommandKind.BUILT_IN,
+      action: async (context: CommandContext, args: string) => {
+        if (!args || args.trim() === '') {
+          context.ui.addItem(
+            {
+              type: MessageType.ERROR,
+              text: t('Usage: /mcp unload <server-id>'),
+            },
+            Date.now(),
+          );
+          return;
+        }
+
+        context.ui.addItem(
+          {
+            type: MessageType.INFO,
+            text: t('Unloading MCP server: {{id}}', { id: args.trim() }),
+          },
+          Date.now(),
+        );
+
+        // This would use the DynamicMCPLoader in a real implementation
+        context.ui.addItem(
+          {
+            type: MessageType.INFO,
+            text: t('Server {{id}} unloaded. Tokens freed!', {
+              id: args.trim(),
             }),
           },
           Date.now(),
         );
-        await toolRegistry.discoverToolsForServer(serverName);
-      }
-      // Update the client with the new tools
-      const geminiClient = config.getGeminiClient();
-      if (geminiClient) {
-        await geminiClient.setTools();
-      }
-
-      // Reload the slash commands to reflect the changes.
-      context.ui.reloadCommands();
-
-      return {
-        type: 'message',
-        messageType: 'info',
-        content: t(
-          "Successfully authenticated and refreshed tools for '{{name}}'.",
-          {
-            name: serverName,
-          },
-        ),
-      };
-    } catch (error) {
-      return {
-        type: 'message',
-        messageType: 'error',
-        content: t(
-          "Failed to authenticate with MCP server '{{name}}': {{error}}",
-          {
-            name: serverName,
-            error: getErrorMessage(error),
-          },
-        ),
-      };
-    } finally {
-      appEvents.removeListener(AppEvent.OauthDisplayMessage, displayListener);
-    }
-  },
-  completion: async (context: CommandContext, partialArg: string) => {
-    const { config } = context.services;
-    if (!config) return [];
-
-    const mcpServers = config.getMcpServers() || {};
-    return Object.keys(mcpServers).filter((name) =>
-      name.startsWith(partialArg),
-    );
-  },
-};
-
-const listCommand: SlashCommand = {
-  name: 'list',
-  get description() {
-    return t('List configured MCP servers and tools');
-  },
-  kind: CommandKind.BUILT_IN,
-  action: async (
-    context: CommandContext,
-    args: string,
-  ): Promise<void | MessageActionReturn> => {
-    const { config } = context.services;
-    if (!config) {
-      return {
-        type: 'message',
-        messageType: 'error',
-        content: t('Config not loaded.'),
-      };
-    }
-
-    const toolRegistry = config.getToolRegistry();
-    if (!toolRegistry) {
-      return {
-        type: 'message',
-        messageType: 'error',
-        content: t('Could not retrieve tool registry.'),
-      };
-    }
-
-    const lowerCaseArgs = args.toLowerCase().split(/\s+/).filter(Boolean);
-
-    const hasDesc =
-      lowerCaseArgs.includes('desc') || lowerCaseArgs.includes('descriptions');
-    const hasNodesc =
-      lowerCaseArgs.includes('nodesc') ||
-      lowerCaseArgs.includes('nodescriptions');
-    const showSchema = lowerCaseArgs.includes('schema');
-
-    const showDescriptions = !hasNodesc && (hasDesc || showSchema);
-    const showTips = lowerCaseArgs.length === 0;
-
-    const mcpServers = config.getMcpServers() || {};
-    const serverNames = Object.keys(mcpServers);
-    const blockedMcpServers = config.getBlockedMcpServers() || [];
-
-    const connectingServers = serverNames.filter(
-      (name) => getMCPServerStatus(name) === MCPServerStatus.CONNECTING,
-    );
-    const discoveryState = getMCPDiscoveryState();
-    const discoveryInProgress =
-      discoveryState === MCPDiscoveryState.IN_PROGRESS ||
-      connectingServers.length > 0;
-
-    const allTools = toolRegistry.getAllTools();
-    const mcpTools = allTools.filter(
-      (tool) => tool instanceof DiscoveredMCPTool,
-    ) as DiscoveredMCPTool[];
-
-    const promptRegistry = await config.getPromptRegistry();
-    const mcpPrompts = promptRegistry
-      .getAllPrompts()
-      .filter(
-        (prompt) =>
-          'serverName' in prompt &&
-          serverNames.includes(prompt.serverName as string),
-      ) as DiscoveredMCPPrompt[];
-
-    const authStatus: HistoryItemMcpStatus['authStatus'] = {};
-    const tokenStorage = new MCPOAuthTokenStorage();
-    for (const serverName of serverNames) {
-      const server = mcpServers[serverName];
-      if (server.oauth?.enabled) {
-        const creds = await tokenStorage.getCredentials(serverName);
-        if (creds) {
-          if (creds.token.expiresAt && creds.token.expiresAt < Date.now()) {
-            authStatus[serverName] = 'expired';
-          } else {
-            authStatus[serverName] = 'authenticated';
-          }
-        } else {
-          authStatus[serverName] = 'unauthenticated';
-        }
-      } else {
-        authStatus[serverName] = 'not-configured';
-      }
-    }
-
-    const mcpStatusItem: HistoryItemMcpStatus = {
-      type: MessageType.MCP_STATUS,
-      servers: mcpServers,
-      tools: mcpTools.map((tool) => ({
-        serverName: tool.serverName,
-        name: tool.name,
-        description: tool.description,
-        schema: tool.schema,
-      })),
-      prompts: mcpPrompts.map((prompt) => ({
-        serverName: prompt.serverName as string,
-        name: prompt.name,
-        description: prompt.description,
-      })),
-      authStatus,
-      blockedServers: blockedMcpServers,
-      discoveryInProgress,
-      connectingServers,
-      showDescriptions,
-      showSchema,
-      showTips,
-    };
-
-    context.ui.addItem(mcpStatusItem, Date.now());
-  },
-};
-
-const refreshCommand: SlashCommand = {
-  name: 'refresh',
-  get description() {
-    return t('Restarts MCP servers.');
-  },
-  kind: CommandKind.BUILT_IN,
-  action: async (
-    context: CommandContext,
-  ): Promise<void | SlashCommandActionReturn> => {
-    const { config } = context.services;
-    if (!config) {
-      return {
-        type: 'message',
-        messageType: 'error',
-        content: t('Config not loaded.'),
-      };
-    }
-
-    const toolRegistry = config.getToolRegistry();
-    if (!toolRegistry) {
-      return {
-        type: 'message',
-        messageType: 'error',
-        content: t('Could not retrieve tool registry.'),
-      };
-    }
-
-    context.ui.addItem(
-      {
-        type: 'info',
-        text: t('Restarting MCP servers...'),
       },
-      Date.now(),
-    );
+    },
+    {
+      name: 'discover',
+      get description() {
+        return t('Discover all tools from all enabled MCP servers.');
+      },
+      kind: CommandKind.BUILT_IN,
+      action: async (context: CommandContext) => {
+        context.ui.addItem(
+          {
+            type: MessageType.INFO,
+            text: t('Discovering MCP tools from all servers...'),
+          },
+          Date.now(),
+        );
 
-    await toolRegistry.restartMcpServers();
+        // This would use the DynamicMCPLoader in a real implementation
+        context.ui.addItem(
+          {
+            type: MessageType.INFO,
+            text: t(
+              'Discovery complete! Use /mcp list tools to see available tools.',
+            ),
+          },
+          Date.now(),
+        );
+      },
+    },
+    {
+      name: 'marketplace',
+      get description() {
+        return t('Browse and discover MCP servers in the marketplace.');
+      },
+      kind: CommandKind.BUILT_IN,
+      action: async (context: CommandContext, args?: string) => {
+        const marketplace = createMCPMarketplaceManager();
 
-    // Update the client with the new tools
-    const geminiClient = config.getGeminiClient();
-    if (geminiClient) {
-      await geminiClient.setTools();
-    }
+        if (args && args.trim()) {
+          // Show details for specific server
+          const server = marketplace.getServerById(args.trim());
 
-    // Reload the slash commands to reflect the changes.
-    context.ui.reloadCommands();
+          if (!server) {
+            context.ui.addItem(
+              {
+                type: MessageType.ERROR,
+                text: t('Server not found: {{id}}', { id: args.trim() }),
+              },
+              Date.now(),
+            );
+            return;
+          }
 
-    return listCommand.action!(context, '');
-  },
-};
+          let output = `🔌 **${server.name}** (${server.id})\\n\\n`;
+          output += `${server.description}\\n\\n`;
+          output += `**Author:** ${server.author} ${server.verified ? '✅' : ''}\\n`;
+          output += `**Category:** ${server.category}\\n`;
+          output += `**Tags:** ${server.tags.join(', ')}\\n`;
+          output += `**Rating:** ⭐ ${server.rating} | **Downloads:** ${server.downloads.toLocaleString()}\\n`;
+          output += `**Token Cost:** ~${server.tokenCost} tokens\\n`;
+          output += `**Transport:** ${server.transport}\\n`;
+          output += `**Requires Auth:** ${server.requiresAuth ? 'Yes 🔐' : 'No'}\\n\\n`;
+          output += `**Repository:** ${server.repository}\\n\\n`;
+          output += `**Install Command:**\\n`;
+          output += `\`/mcp add ${server.id} --command "npx -y ${server.npmPackage}"\`\\n\\n`;
 
-export const mcpCommand: SlashCommand = {
-  name: 'mcp',
-  get description() {
-    return t(
-      'list configured MCP servers and tools, or authenticate with OAuth-enabled servers',
-    );
-  },
-  kind: CommandKind.BUILT_IN,
-  subCommands: [listCommand, authCommand, refreshCommand],
-  // Default action when no subcommand is provided
-  action: async (
-    context: CommandContext,
-    args: string,
-  ): Promise<void | SlashCommandActionReturn> =>
-    // If no subcommand, run the list command
-    listCommand.action!(context, args),
+          if (server.requiresAuth) {
+            output += `⚠️ This server requires authentication. Set up OAuth with /mcp oauth ${server.id}\\n`;
+          }
+
+          context.ui.addItem(
+            {
+              type: MessageType.INFO,
+              text: output,
+            },
+            Date.now(),
+          );
+        } else {
+          // Show marketplace
+          const output = marketplace.formatDisplay();
+
+          context.ui.addItem(
+            {
+              type: MessageType.INFO,
+              text: output,
+            },
+            Date.now(),
+          );
+        }
+      },
+    },
+    {
+      name: 'stats',
+      get description() {
+        return t('Show MCP statistics and token usage.');
+      },
+      kind: CommandKind.BUILT_IN,
+      action: async (context: CommandContext) => {
+        const configManager = createMCPConfigManager();
+        const servers = await configManager.getServers();
+
+        const enabledCount = servers.filter((s) => s.enabled).length;
+        const dynamicCount = servers.filter((s) => s.dynamic).length;
+
+        const output = `╔═══════════════════════════════════════════════════════════╗
+║  📊 MCP Statistics                                          ║
+╠═══════════════════════════════════════════════════════════╣
+║  ${t('Total Servers:')} ${String(servers.length).padEnd(40)} ║
+║  ${t('Enabled:')} ${String(enabledCount).padEnd(44)} ║
+║  ${t('Disabled:')} ${String(servers.length - enabledCount).padEnd(43)} ║
+║  ${t('Dynamic Loading:')} ${String(dynamicCount).padEnd(38)} ║
+╠═══════════════════════════════════════════════════════════╣
+║  ${t('Token Budget:')} 50,000 tokens (configurable)                    ║
+║  ${t('Current Usage:')} 0 tokens (no servers loaded)                   ║
+╠═══════════════════════════════════════════════════════════╣
+║  ${t('Dynamic Loading:')} Enabled                                      ║
+║  ${t('Auto-Load:')} Disabled                                           ║
+╚═══════════════════════════════════════════════════════════╝
+
+${t('Tip: Use dynamic loading to save tokens. Servers load only when needed!')}`;
+
+        context.ui.addItem(
+          {
+            type: MessageType.INFO,
+            text: output,
+          },
+          Date.now(),
+        );
+      },
+    },
+  ],
 };

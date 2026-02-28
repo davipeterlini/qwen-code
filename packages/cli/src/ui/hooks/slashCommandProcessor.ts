@@ -32,6 +32,7 @@ import { type CommandContext, type SlashCommand } from '../commands/types.js';
 import { CommandService } from '../../services/CommandService.js';
 import { BuiltinCommandLoader } from '../../services/BuiltinCommandLoader.js';
 import { FileCommandLoader } from '../../services/FileCommandLoader.js';
+import { JsonCommandLoader } from '../../services/JsonCommandLoader.js';
 import { McpPromptLoader } from '../../services/McpPromptLoader.js';
 import { MarkdownCommandLoader } from '../../services/MarkdownCommandLoader.js';
 import { parseSlashCommand } from '../../utils/commands.js';
@@ -277,6 +278,7 @@ export const useSlashCommandProcessor = (
         new BuiltinCommandLoader(config),
         new MarkdownCommandLoader(config),
         new FileCommandLoader(config),
+        new JsonCommandLoader(config),
       ];
       const commandService = await CommandService.create(
         loaders,

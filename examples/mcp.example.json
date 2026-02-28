@@ -1,0 +1,101 @@
+{
+  "$schema": "https://qwen-code.dev/schemas/mcp-config.json",
+  "servers": [
+    {
+      "id": "context7",
+      "name": "Context7 (Library Docs)",
+      "description": "Fetch up-to-date documentation for any library or framework",
+      "command": "npx -y @upstash/context7-mcp",
+      "args": [],
+      "transport": "stdio",
+      "enabled": true,
+      "dynamic": true,
+      "timeout": 30000
+    },
+    {
+      "id": "github",
+      "name": "GitHub",
+      "description": "Access GitHub issues, PRs, and repository information",
+      "command": "npx -y @modelcontextprotocol/server-github",
+      "args": [],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+      },
+      "transport": "stdio",
+      "enabled": true,
+      "dynamic": true,
+      "timeout": 30000
+    },
+    {
+      "id": "filesystem",
+      "name": "Filesystem",
+      "description": "Advanced file operations with sandbox access",
+      "command": "npx -y @modelcontextprotocol/server-filesystem",
+      "args": ["/Users/username/projects"],
+      "transport": "stdio",
+      "enabled": true,
+      "dynamic": false,
+      "timeout": 30000
+    },
+    {
+      "id": "postgres",
+      "name": "PostgreSQL",
+      "description": "Query PostgreSQL databases",
+      "command": "npx -y @modelcontextprotocol/server-postgres",
+      "args": ["postgresql://localhost:5432/mydb"],
+      "transport": "stdio",
+      "enabled": false,
+      "dynamic": true,
+      "timeout": 30000
+    },
+    {
+      "id": "slack",
+      "name": "Slack",
+      "description": "Send messages and search Slack channels",
+      "command": "npx -y @modelcontextprotocol/server-slack",
+      "env": {
+        "SLACK_BOT_TOKEN": "${SLACK_BOT_TOKEN}"
+      },
+      "transport": "stdio",
+      "enabled": false,
+      "dynamic": true,
+      "timeout": 30000
+    },
+    {
+      "id": "notion",
+      "name": "Notion",
+      "description": "Read and write Notion pages and databases",
+      "command": "npx -y @modelcontextprotocol/server-notion",
+      "env": {
+        "NOTION_INTEGRATION_TOKEN": "${NOTION_TOKEN}"
+      },
+      "transport": "stdio",
+      "enabled": false,
+      "dynamic": true,
+      "timeout": 30000
+    },
+    {
+      "id": "puppeteer",
+      "name": "Puppeteer (Web Browser)",
+      "description": "Navigate websites and take screenshots",
+      "command": "npx -y @modelcontextprotocol/server-puppeteer",
+      "transport": "stdio",
+      "enabled": false,
+      "dynamic": true,
+      "timeout": 60000
+    },
+    {
+      "id": "memory",
+      "name": "Memory Bank",
+      "description": "Long-term memory for Qwen Code conversations",
+      "command": "npx -y @modelcontextprotocol/server-memory",
+      "transport": "stdio",
+      "enabled": true,
+      "dynamic": false,
+      "timeout": 30000
+    }
+  ],
+  "dynamicLoading": true,
+  "autoLoad": false,
+  "tokenBudget": 50000
+}

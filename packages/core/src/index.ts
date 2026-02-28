@@ -46,6 +46,43 @@ export * from './output/json-formatter.js';
 export * from './output/types.js';
 
 // ============================================================================
+// MCP (Model Context Protocol)
+// ============================================================================
+
+export * from './mcp/types.js';
+export {
+  MCPConfigManager,
+  createMCPConfigManager,
+} from './mcp/MCPConfigManager.js';
+export { MCPRegistry, createMCPRegistry } from './mcp/MCPRegistry.js';
+export {
+  DynamicMCPLoader,
+  createDynamicMCPLoader,
+} from './mcp/DynamicMCPLoader.js';
+export {
+  MCPCacheManager,
+  createMCPCacheManager,
+} from './mcp/MCPCacheManager.js';
+export {
+  MCPOAuthManager,
+  createMCPOAuthManager,
+  type MCPOAuthToken,
+} from './mcp/MCPOAuthManager.js';
+export {
+  MCPMarketplaceManager,
+  createMCPMarketplaceManager,
+  OFFICIAL_MCP_SERVERS,
+  type MCPServerEntry,
+  type MCPServerCategory,
+} from './mcp/MCPMarketplace.js';
+export {
+  detectNeededServers,
+  autoLoadServersForPrompt,
+  getServerSuggestions,
+  formatDiscoverySuggestions,
+} from './mcp/MCPAutoDiscovery.js';
+
+// ============================================================================
 // Core Engine
 // ============================================================================
 

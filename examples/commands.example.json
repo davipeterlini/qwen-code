@@ -1,0 +1,34 @@
+{
+  "commands": {
+    "review": {
+      "description": "Review code changes and suggest improvements",
+      "prompt": "Please review the following code for:\n1. Code quality and best practices\n2. Potential bugs or edge cases\n3. Performance improvements\n4. Security considerations\n5. Readability and maintainability\n\nProvide specific, actionable feedback.",
+      "tools": ["ReadFile", "Glob"],
+      "autoApprove": false
+    },
+    "test": {
+      "description": "Generate comprehensive tests for the current file",
+      "prompt": "Generate comprehensive unit tests for the code in context. Include:\n1. Happy path tests\n2. Edge case tests\n3. Error handling tests\n4. Integration tests where appropriate\n\nUse the testing framework already in use in this project.",
+      "tools": ["ReadFile", "WriteFile", "Glob"],
+      "autoApprove": false
+    },
+    "refactor": {
+      "description": "Refactor code following best practices",
+      "prompt": "Help me refactor this code to improve:\n1. Readability and clarity\n2. Maintainability\n3. Performance\n4. Adherence to SOLID principles\n5. Design patterns where appropriate\n\nExplain your reasoning for each change.",
+      "tools": ["ReadFile", "WriteFile", "EditFile"],
+      "autoApprove": false
+    },
+    "explain": {
+      "description": "Explain how the codebase works",
+      "prompt": "Please explain how this codebase works, focusing on:\n1. Overall architecture\n2. Key components and their responsibilities\n3. Data flow\n4. Important design decisions\n\nUse diagrams or examples where helpful.",
+      "tools": ["ReadFile", "Glob", "Grep"],
+      "autoApprove": false
+    },
+    "setup": {
+      "description": "Help set up the development environment",
+      "prompt": "Help me set up the development environment for this project. Please:\n1. Check if all dependencies are installed\n2. Install any missing dependencies\n3. Configure environment variables\n4. Run initial setup scripts\n5. Verify everything works\n\nProvide clear instructions for any manual steps needed.",
+      "tools": ["ReadFile", "Shell", "Glob"],
+      "autoApprove": false
+    }
+  }
+}
