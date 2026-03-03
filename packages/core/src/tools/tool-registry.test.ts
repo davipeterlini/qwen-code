@@ -77,6 +77,7 @@ vi.mock('@modelcontextprotocol/sdk/client/sse.js', () => {
 vi.mock('@google/genai', async () => {
   const actualGenai =
     await vi.importActual<typeof import('@google/genai')>('@google/genai');
+
   return {
     ...actualGenai,
     mcpToTool: vi.fn().mockImplementation(() => ({

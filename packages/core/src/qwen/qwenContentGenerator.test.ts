@@ -223,6 +223,7 @@ vi.mock('../core/openaiContentGenerator/index.js', () => ({
     pipeline: {
       client: {
         apiKey: string;
+
         baseURL: string;
       };
     };

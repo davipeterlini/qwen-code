@@ -34,5 +34,7 @@ export default defineConfig({
         maxThreads: 16,
       },
     },
+    // Enable manual mocks
+    mockReset: false,
   },
 });

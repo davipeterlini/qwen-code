@@ -5,6 +5,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+// Import directly from the file to bypass the mock
 import {
   createDebugLogger,
   isDebugLoggingDegraded,
@@ -15,6 +16,7 @@ import {
 import { promises as fs } from 'node:fs';
 import { Storage } from '../config/storage.js';
 
+// Mock fs to simulate file system failures
 vi.mock('node:fs', async (importOriginal) => {
   const actual = await importOriginal<typeof import('node:fs')>();
   return {

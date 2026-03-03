@@ -11,8 +11,7 @@
 docs/improvements/
 ├── README.md                      # Este arquivo
 ├── claude-improvements.md         # Melhorias inspiradas no Claude Code
-├── benchmark.md                   # Guia de benchmark e comparação
-└── archived/                      # Documentos históricos (opcional)
+└── benchmark.md                   # Guia de benchmark e comparação
 ```
 
 ---
@@ -82,6 +81,17 @@ time claude "<prompt>"
 # 4. Preencher planilha (ver benchmark.md)
 ```
 
+### Rodar Testes com Coverage
+
+```bash
+# Rodar testes do core package
+cd packages/core
+npm run test:ci
+
+# Ver cobertura
+cat coverage/coverage-summary.json
+```
+
 ---
 
 ## 📊 Resumo das Melhorias
@@ -117,6 +127,33 @@ time claude "<prompt>"
 | **Sessão Simples**    | $0.05 | $0.03  | -40%     |
 | **Sessão Complexa**   | $0.50 | $0.30  | -40%     |
 | **Sessão Enterprise** | $5.00 | $3.00  | -40%     |
+
+---
+
+## 🧪 Cobertura de Testes
+
+### Status Atual
+
+| Pacote            | Arquivos de Teste | Tests | Cobertura |
+| ----------------- | ----------------- | ----- | --------- |
+| **packages/core** | 166               | 3,671 | ~18%      |
+
+### Como Rodar Testes
+
+```bash
+# Core package
+cd packages/core
+npm run test:ci
+
+# Ver coverage
+cat coverage/coverage-summary.json
+```
+
+### Notas sobre Testes
+
+- Os testes rodam em modo single-thread para evitar race conditions
+- Coverage é gerado automaticamente em `coverage/coverage-summary.json`
+- 2 testes conhecidos falham no `coreToolScheduler.test.ts` (race condition)
 
 ---
 

@@ -13,7 +13,7 @@
     "lint": "eslint . --ext .ts,.tsx",
     "format": "prettier --write .",
     "test": "vitest run",
-    "test:ci": "vitest run",
+    "test:ci": "vitest run --pool forks --poolOptions.threads.singleThread --coverage.enabled=true",
     "typecheck": "tsc --noEmit",
     "postinstall": "node scripts/postinstall.js"
   },

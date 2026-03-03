@@ -19,6 +19,7 @@ const mockGetGeminiClient = vi.fn(() => ({
 
 vi.mock('../utils/fetch.js', async (importOriginal) => {
   const actual = await importOriginal<typeof fetchUtils>();
+
   return {
     ...actual,
     fetchWithTimeout: vi.fn(),

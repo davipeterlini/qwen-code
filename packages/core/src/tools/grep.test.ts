@@ -20,6 +20,7 @@ vi.mock('glob', { spy: true });
 // Mock the child_process module to control grep/git grep behavior
 vi.mock('child_process', async (importOriginal) => {
   const actual = await importOriginal<typeof import('child_process')>();
+
   return {
     ...actual,
     spawn: vi.fn(() => {

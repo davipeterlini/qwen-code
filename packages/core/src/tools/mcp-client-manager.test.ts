@@ -14,6 +14,7 @@ import type { WorkspaceContext } from '../utils/workspaceContext.js';
 
 vi.mock('./mcp-client.js', async () => {
   const originalModule = await vi.importActual('./mcp-client.js');
+
   return {
     ...originalModule,
     McpClient: vi.fn(),

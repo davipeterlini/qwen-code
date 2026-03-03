@@ -9,7 +9,7 @@ import {
   createDynamicMCPLoader,
 } from '@qwen-code/qwen-code-core';
 import type { MCPServerConfigSchemaType } from '@qwen-code/qwen-code-core';
-import { createDebugLogger } from '@qwen-code/qwen-code-core';
+import { createDebugLogger } from '../utils/debugLogger.js';
 
 const debugLogger = createDebugLogger('MCP_AUTO_DISCOVERY');
 

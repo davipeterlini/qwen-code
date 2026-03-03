@@ -109,6 +109,7 @@ vi.mock('../skills/skill-manager.js', () => {
 
 vi.mock('./subagent-manager.js', () => {
   const SubagentManagerMock = vi.fn();
+
   SubagentManagerMock.prototype.loadSessionSubagents = vi.fn();
   SubagentManagerMock.prototype.addChangeListener = vi
     .fn()

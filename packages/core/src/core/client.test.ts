@@ -158,6 +158,7 @@ vi.mock('../utils/request-tokenizer/requestTokenizer.js', () => ({
     async calculateTokens(request: { contents: unknown }) {
       // Simple estimation: count characters in JSON and divide by 4
       const totalChars = JSON.stringify(request.contents).length;
+
       return {
         totalTokens: Math.floor(totalChars / 4),
         breakdown: {
